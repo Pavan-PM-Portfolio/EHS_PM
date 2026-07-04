@@ -1003,7 +1003,7 @@ const ui = { view:'board', project:'all', openTask:null, board:'main', analytics
     fields:['key','title','status','priority','assignee','due','logged'],
     f:{ project:'all', assignee:'all', status:'all', priority:'all', type:'all', epic:'all', hasTime:'any', overdue:'any', dateField:'none', from:'', to:'' } },
   filters:{search:'', assignee:'all', status:'all', priority:'all', type:'all', time:'all', epic:'all'} };
-function activeBoard(){ return store.board(ui.board) || store.boards()[0]; }
+function activeBoard(){ return store.board(ui.board) || (store.boards()&&store.boards()[0]) || null; }
 function allowedTargets(b, from){ return (b.transitions&&b.transitions[from])||[]; }
 function canMove(b, from, to){ if(from===to) return true; if(!b.enforce) return true; return allowedTargets(b, from).includes(to); }
 
@@ -1083,8 +1083,9 @@ function cardHTML(t){
 
 function renderBoard(){
   const board=document.getElementById('board');
-  const tasks=filteredTasks();
   const bd=activeBoard();
+  if(!bd){ board.innerHTML=`<div class="empty" style="margin:40px auto"><div class="big">No board yet</div>This workspace hasn’t been set up. An admin needs to load data (Settings → reset), or check the console for a setup error.</div>`; return; }
+  const tasks=filteredTasks();
   const cols=store.boardColumns(bd);
   const shownIds=cols.map(s=>s.id);
   const hidden=tasks.filter(t=>!shownIds.includes(t.status)).length;
@@ -1571,7 +1572,7 @@ const VIEW_TITLE={overview:'Overview',board:'Board',list:'List',epics:'Epics',te
 const SOON_VIEWS={};
 function renderAll(){ renderProjectSwitch(); fillFilters(); renderSideCard(); applyBrand();
   const v=ui.view;
-  document.getElementById('pageTitle').textContent = v==='board' ? activeBoard().name : (VIEW_TITLE[v]||'EHS Project Management');
+  document.getElementById('pageTitle').textContent = v==='board' ? ((activeBoard()&&activeBoard().name)||'Board') : (VIEW_TITLE[v]||'EHS Project Management');
   document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.classList.toggle('on', b.dataset.view===v));
   const onAn=v==='analytics';
   const anTog=document.getElementById('navAnalyticsToggle');
@@ -2277,8 +2278,12 @@ async function loadWorkspace(){
   WS=mem.workspace_id; IS_ADMIN=(mem.role==='admin');
   await fetchAll();
   const empty = !(store.data.statuses&&store.data.statuses.length);
-  if(empty){ if(IS_ADMIN){ await pushSeed(); await fetchAll(); } }
-  STATUSES=store.data.statuses;
+  if(empty){
+    if(IS_ADMIN){ try{ await pushSeed(); await fetchAll(); toast('Workspace set up — data loaded'); }
+      catch(e){ console.error(e); setTimeout(()=>toast('Setup couldn’t write data: '+e.message),400); } }
+    else { setTimeout(()=>toast('This workspace has no data yet — ask an admin to set it up.'),400); }
+  }
+  STATUSES=store.data.statuses||[];
   buildSnap(); applyDefaults(); applyRole();
   document.getElementById('authScreen').style.display='none';
   renderAll(); subscribeRealtime();
@@ -2298,14 +2303,17 @@ async function fetchAll(){
 }
 async function pushSeed(){
   const S=JSON.parse(JSON.stringify(SEED));
-  await sb.from('projects').upsert(S.projects.map(d=>({workspace_id:WS,id:d.id,doc:d})));
-  await sb.from('statuses').upsert(S.statuses.map((d,i)=>({workspace_id:WS,id:d.id,doc:d,sort:i})));
-  await sb.from('boards').upsert(S.boards.map((d,i)=>({workspace_id:WS,id:d.id,doc:d,sort:i})));
-  await sb.from('teams').upsert(S.teams.map(d=>({workspace_id:WS,id:d.id,doc:d})));
-  await sb.from('people').upsert(S.users.map(d=>({workspace_id:WS,id:d.id,doc:d})));
-  await sb.from('tasks').upsert(S.tasks.map(d=>({workspace_id:WS,id:d.id,doc:d})));
-  await sb.from('worklogs').upsert(S.worklogs.map(d=>({workspace_id:WS,id:d.id,doc:d})));
-  await sb.from('settings').upsert({workspace_id:WS,doc:S.settings});
+  const steps=[
+    ['projects', S.projects.map(d=>({workspace_id:WS,id:d.id,doc:d}))],
+    ['statuses', S.statuses.map((d,i)=>({workspace_id:WS,id:d.id,doc:d,sort:i}))],
+    ['boards',   S.boards.map((d,i)=>({workspace_id:WS,id:d.id,doc:d,sort:i}))],
+    ['teams',    S.teams.map(d=>({workspace_id:WS,id:d.id,doc:d}))],
+    ['people',   S.users.map(d=>({workspace_id:WS,id:d.id,doc:d}))],
+    ['tasks',    S.tasks.map(d=>({workspace_id:WS,id:d.id,doc:d}))],
+    ['worklogs', S.worklogs.map(d=>({workspace_id:WS,id:d.id,doc:d}))],
+  ];
+  for(const [t,rows] of steps){ const {error}=await sb.from(t).upsert(rows); if(error){ console.error('SEED FAILED on '+t, error); throw new Error(t+' — '+error.message); } }
+  const {error:se}=await sb.from('settings').upsert({workspace_id:WS,doc:S.settings}); if(se){ console.error('SEED FAILED on settings', se); throw new Error('settings — '+se.message); }
 }
 
 // ---- role gating (RLS is the real enforcement; this hides admin UI) ----
