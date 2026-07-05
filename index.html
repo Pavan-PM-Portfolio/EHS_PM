@@ -225,6 +225,12 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .card-num{font-size:13.5px;font-weight:700;color:var(--ink);flex:none;letter-spacing:.02em;white-space:nowrap}
 .card-proj .hkey,.card-num .hkey{color:var(--muted);font-weight:600;text-transform:none;letter-spacing:normal}
 .cedit-proj{font-size:13.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;max-width:150px;padding:1px 15px 1px 3px;margin:0}
+.projbtn{display:inline-flex;align-items:center;gap:5px;border:1px solid transparent;background:none;cursor:pointer;
+  font-family:inherit;font-size:13.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;
+  padding:1px 4px;margin:-1px -4px;border-radius:5px;max-width:180px}
+.projbtn:hover{border-color:var(--line);background:var(--surface-2)}
+.projbtn-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.projbtn .cfchev{flex:none;opacity:.6}
 .card-body{padding:11px 12px 12px}
 .card-title{font-size:13.5px;font-weight:600;line-height:1.4;color:var(--ink);margin-bottom:11px}
 .epic-tag{display:flex;align-items:center;gap:6px;max-width:100%;font-size:11px;color:var(--ink-2);
@@ -1269,7 +1275,7 @@ function cardHTML(t){
   return `<div class="card" draggable="true" data-id="${t.id}">
     <div class="card-hdr">
       <div class="card-hdr-l">
-        <span class="card-proj"><span class="hkey">Project:</span> <select class="cedit cedit-proj" data-f="project" style="color:${pcol}"><option value="">Not Assigned</option>${store.projects().map(pr=>`<option value="${pr.id}" ${t.project===pr.id?'selected':''}>${esc(pr.name)}</option>`).join('')}</select></span>
+        <span class="card-proj"><span class="hkey">Project:</span> <button class="projbtn" data-id="${t.id}" style="color:${pcol}"><span class="projbtn-t">${proj?esc(proj.name):'Not Assigned'}</span><svg class="cfchev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></span>
         <span class="card-num"><span class="hkey">Ticket No:</span> ${t.key}</span>
       </div>
     </div>
@@ -1380,7 +1386,7 @@ function sortList(key){
   renderList();
 }
 
-function attachCardEvents(root){ root.querySelectorAll('.card').forEach(c=>c.onclick=e=>{ if(e.target.closest('.cedit')||e.target.closest('.clog')||e.target.closest('.cfedit')||e.target.closest('.cfmulti')) return; if(!c.classList.contains('dragging')) openPanel(c.dataset.id); });
+function attachCardEvents(root){ root.querySelectorAll('.card').forEach(c=>c.onclick=e=>{ if(e.target.closest('.cedit')||e.target.closest('.clog')||e.target.closest('.cfedit')||e.target.closest('.cfmulti')||e.target.closest('.projbtn')) return; if(!c.classList.contains('dragging')) openPanel(c.dataset.id); });
   root.querySelectorAll('.cedit').forEach(el=>{ el.onmousedown=e=>e.stopPropagation(); el.onclick=e=>e.stopPropagation();
     el.onchange=e=>{ e.stopPropagation(); const id=el.closest('.card').dataset.id; const f=el.dataset.f; let v=el.value;
       if(f==='due'||f==='assignee'||f==='project') v=v||null; store.updateTask(id,{[f]:v}); refreshViews(); }; });
@@ -1395,6 +1401,20 @@ function wireCustomEdits(root, after){
       store.setCustom(id,fid,v); if(after) after(); }; });
   root.querySelectorAll('.cfmulti').forEach(el=>{ el.onmousedown=e=>e.stopPropagation();
     el.onclick=e=>{ e.stopPropagation(); openCfMulti(el.dataset.id, el.dataset.fid, el, after); }; });
+  root.querySelectorAll('.projbtn').forEach(el=>{ el.onmousedown=e=>e.stopPropagation();
+    el.onclick=e=>{ e.stopPropagation(); const id=el.dataset.id; const t=store.task(id);
+      const opts=[{v:'',t:'Not Assigned'}].concat(store.projects().map(pr=>({v:pr.id,t:pr.name,dot:pr.color})));
+      openSelMenu(el, opts, t.project||'', v=>{ store.updateTask(id,{project:v||null}); refreshViews(); }); }; });
+}
+function openSelMenu(anchor, opts, cur, onPick){
+  const menu=document.getElementById('cfMenu'); const searchable=opts.length>8;
+  const draw=(q)=>{ const items=opts.filter(o=>!q||o.t.toLowerCase().includes(q.toLowerCase()));
+    menu.querySelector('.fmenu-list').innerHTML = items.length?items.map(o=>`<div class="fmenu-item ${o.v===cur?'sel':''}" data-v="${esc(o.v)}">${o.v===cur?'<svg class="fchk" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>':(o.dot?`<span class="fdot" style="background:${o.dot}"></span>`:'<span class="fchk"></span>')}<span style="overflow:hidden;text-overflow:ellipsis">${esc(o.t)}</span></div>`).join(''):'<div class="fmenu-empty">No matches</div>';
+    menu.querySelectorAll('.fmenu-item').forEach(it=>it.onclick=e=>{ e.stopPropagation(); onPick(it.dataset.v); menu.classList.remove('on'); }); };
+  menu.innerHTML=(searchable?`<div class="fmenu-search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search"/></div>`:'')+`<div class="fmenu-list"></div>`;
+  draw('');
+  const r=anchor.getBoundingClientRect(); menu.style.top=(r.bottom+6)+'px'; menu.style.left=Math.min(r.left, window.innerWidth-260)+'px'; menu.classList.add('on');
+  const si=menu.querySelector('.fmenu-search input'); if(si){ si.oninput=()=>draw(si.value); setTimeout(()=>si.focus(),0); }
 }
 function openCfMulti(taskId, fid, anchor, after){
   const menu=document.getElementById('cfMenu'); const f=store.fields().find(x=>x.id===fid);
@@ -1405,7 +1425,7 @@ function openCfMulti(taskId, fid, anchor, after){
     let arr=(((store.task(taskId)||{}).custom||{})[fid]||[]).slice(); if(arr.includes(o)) arr=arr.filter(x=>x!==o); else arr.push(o);
     store.setCustom(taskId,fid,arr); if(after) after(); menu.classList.remove('on'); });
 }
-document.addEventListener('click',e=>{ if(!e.target.closest('#cfMenu')&&!e.target.closest('.cfmulti')) document.getElementById('cfMenu').classList.remove('on'); });
+document.addEventListener('click',e=>{ if(!e.target.closest('#cfMenu')&&!e.target.closest('.cfmulti')&&!e.target.closest('.projbtn')) document.getElementById('cfMenu').classList.remove('on'); });
 
 function renderEpics(){
   const wrap=document.getElementById('epicswrap');
@@ -1444,7 +1464,7 @@ let dragId=null, dragFrom=null;
 function attachDnD(board){
   const bd=activeBoard();
   board.querySelectorAll('.card').forEach(card=>{
-    card.addEventListener('dragstart',e=>{ if(e.target.closest('.cedit')||e.target.closest('.clog')||e.target.closest('.cfedit')||e.target.closest('.cfmulti')){ e.preventDefault(); return; }
+    card.addEventListener('dragstart',e=>{ if(e.target.closest('.cedit')||e.target.closest('.clog')||e.target.closest('.cfedit')||e.target.closest('.cfmulti')||e.target.closest('.projbtn')){ e.preventDefault(); return; }
       dragId=card.dataset.id; const t=store.task(dragId); dragFrom=t?t.status:null;
       card.classList.add('dragging'); e.dataTransfer.effectAllowed='move';
       if(bd.enforce){ board.querySelectorAll('.col').forEach(col=>{ const to=col.dataset.status;
@@ -1558,6 +1578,7 @@ function openPanel(id, keepScroll){
       <div class="meta-grid">
         <div class="meta-item"><div class="l">Status</div><select id="pStatus">${(function(){ const bd=activeBoard(); const allow=bd.enforce?[t.status,...allowedTargets(bd,t.status)]:STATUSES.map(s=>s.id); return STATUSES.filter(s=>allow.includes(s.id)).map(s=>`<option value="${s.id}" ${s.id===t.status?'selected':''}>${esc(s.name)}</option>`).join(''); })()}</select></div>
         <div class="meta-item"><div class="l">Assignee</div><select id="pAssignee"><option value="">Unassigned</option>${store.users().map(u=>`<option value="${u.id}" ${u.id===t.assignee?'selected':''}>${u.name}</option>`).join('')}</select></div>
+        <div class="meta-item"><div class="l">Project</div><select id="pProject"><option value="">Not Assigned</option>${store.projects().map(pr=>`<option value="${pr.id}" ${pr.id===t.project?'selected':''}>${esc(pr.name)}</option>`).join('')}</select></div>
         <div class="meta-item"><div class="l">Priority</div><select id="pPriority">${Object.keys(PRIORITIES).map(p=>`<option ${p===t.priority?'selected':''}>${p}</option>`).join('')}</select></div>
         <div class="meta-item"><div class="l">Reporter</div><select id="pReporter"><option value="">—</option>${store.users().map(u=>`<option value="${u.id}" ${u.id===t.reporter?'selected':''}>${u.name}</option>`).join('')}</select></div>
         <div class="meta-item"><div class="l">Start date</div><input id="pStart" type="date" value="${t.start||''}"/></div>
@@ -1590,6 +1611,7 @@ function openPanel(id, keepScroll){
   document.getElementById('panelClose').onclick=closePanel;
   document.getElementById('pStatus').onchange=e=>{ store.updateTask(id,{status:e.target.value}); refreshViews(); openPanel(id,true); toast('Status updated'); };
   document.getElementById('pAssignee').onchange=e=>{ store.updateTask(id,{assignee:e.target.value||null}); refreshViews(); };
+  document.getElementById('pProject').onchange=e=>{ store.updateTask(id,{project:e.target.value||null}); refreshViews(); openPanel(id,true); };
   document.getElementById('pPriority').onchange=e=>{ store.updateTask(id,{priority:e.target.value}); refreshViews(); };
   document.getElementById('pReporter').onchange=e=>{ store.updateTask(id,{reporter:e.target.value||null}); openPanel(id,true); };
   document.getElementById('pStart').onchange=e=>{ store.updateTask(id,{start:e.target.value||null}); };
