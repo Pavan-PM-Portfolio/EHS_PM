@@ -189,6 +189,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .filter-count{font-size:12px;color:var(--muted);margin-left:auto}
 .filter-count b{color:var(--ink-2);font-weight:600}
 .period-seg{display:inline-flex;background:var(--surface-3);border-radius:9px;padding:3px;gap:2px;flex:none}
+.fbar-right{display:flex;align-items:center;gap:7px;margin-left:auto;flex:none;padding-left:16px}
 .period-seg button{border:0;background:none;padding:5px 10px;border-radius:7px;font-size:12px;font-weight:500;
   color:var(--muted);cursor:pointer;white-space:nowrap;transition:.12s}
 .period-seg button:hover{color:var(--ink-2)}
@@ -868,6 +869,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
 
     <div class="filterbar" id="filterbar">
       <div class="chips" id="filterChips"></div>
+      <div class="fbar-right">
       <div class="fl" id="fPeriodCustom" style="display:none"><input type="date" id="fFrom" class="an-date"/><span style="color:var(--muted);font-size:12px">to</span><input type="date" id="fTo" class="an-date"/></div>
       <div class="period-seg" id="periodSeg">
         <button data-p="all" class="on">All</button>
@@ -877,6 +879,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
         <button data-p="custom">Custom</button>
       </div>
       <button class="filter-clear" id="clearFilters">Clear all</button>
+      </div>
     </div>
     </div>
     <div class="fmenu" id="filterMenu"></div>
