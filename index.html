@@ -1229,7 +1229,7 @@ function openFilterMenu(key, chip){
   fmOpen=key;
   const cur=ui.filters[key]||'all';
   const draw=(q)=>{ const items=def.opts().filter(o=>!q||o.t.toLowerCase().includes(q.toLowerCase()));
-    const list=items.length?items.map(o=>`<div class="fmenu-item ${o.v===cur?'sel':''}" data-v="${o.v}">${o.v===cur?'<svg class="fchk" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>':(o.dot?`<span class="fdot" style="background:${o.dot}"></span>`:'<span class="fchk"></span>')}<span style="overflow:hidden;text-overflow:ellipsis">${esc(o.t)}</span></div>`).join(''):'<div class="fmenu-empty">No matches</div>';
+    const list=items.length?items.map(o=>`<div class="fmenu-item ${o.v===cur?'sel':''}" data-v="${o.v}">${o.v===cur?'<svg class="fchk" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>':'<span class="fchk"></span>'}<span style="overflow:hidden;text-overflow:ellipsis">${esc(o.t)}</span></div>`).join(''):'<div class="fmenu-empty">No matches</div>';
     menu.querySelector('.fmenu-list').innerHTML=list;
     menu.querySelectorAll('.fmenu-item').forEach(it=>it.onclick=()=>{ ui.filters[key]=it.dataset.v; closeFilterMenu(); renderFilterChips(); refreshViews(); }); };
   menu.innerHTML=(def.search?`<div class="fmenu-search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search ${def.label.toLowerCase()}"/></div>`:'')+`<div class="fmenu-list"></div>`;
@@ -1409,7 +1409,7 @@ function wireCustomEdits(root, after){
 function openSelMenu(anchor, opts, cur, onPick){
   const menu=document.getElementById('cfMenu'); const searchable=opts.length>8;
   const draw=(q)=>{ const items=opts.filter(o=>!q||o.t.toLowerCase().includes(q.toLowerCase()));
-    menu.querySelector('.fmenu-list').innerHTML = items.length?items.map(o=>`<div class="fmenu-item ${o.v===cur?'sel':''}" data-v="${esc(o.v)}">${o.v===cur?'<svg class="fchk" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>':(o.dot?`<span class="fdot" style="background:${o.dot}"></span>`:'<span class="fchk"></span>')}<span style="overflow:hidden;text-overflow:ellipsis">${esc(o.t)}</span></div>`).join(''):'<div class="fmenu-empty">No matches</div>';
+    menu.querySelector('.fmenu-list').innerHTML = items.length?items.map(o=>`<div class="fmenu-item ${o.v===cur?'sel':''}" data-v="${esc(o.v)}">${o.v===cur?'<svg class="fchk" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>':'<span class="fchk"></span>'}<span style="overflow:hidden;text-overflow:ellipsis">${esc(o.t)}</span></div>`).join(''):'<div class="fmenu-empty">No matches</div>';
     menu.querySelectorAll('.fmenu-item').forEach(it=>it.onclick=e=>{ e.stopPropagation(); onPick(it.dataset.v); menu.classList.remove('on'); }); };
   menu.innerHTML=(searchable?`<div class="fmenu-search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search"/></div>`:'')+`<div class="fmenu-list"></div>`;
   draw('');
