@@ -140,11 +140,11 @@ input,select,textarea{font-family:inherit;font-size:13px}
 
 /* ---------- Filter bar ---------- */
 .filterbar{display:flex;align-items:center;gap:10px;padding:10px 22px;
-  background:var(--bg);border-bottom:1px solid var(--line);flex:none;flex-wrap:wrap}
-.fl{display:flex;align-items:center;gap:6px}
-.fl label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  background:var(--bg);border-bottom:1px solid var(--line);flex:none;flex-wrap:nowrap;overflow-x:auto}
+.fl{display:flex;align-items:center;gap:6px;flex:none}
+.fl label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 .fl select{border:1px solid var(--line);background:var(--surface-2);border-radius:7px;padding:6px 8px;
-  color:var(--ink-2);outline:none;font-weight:500}
+  color:var(--ink-2);outline:none;font-weight:500;max-width:150px}
 .fl select:focus{border-color:var(--accent)}
 .filter-clear{border:0;background:none;color:var(--accent);font-size:12px;font-weight:600;padding:6px 4px}
 .filter-count{font-size:12px;color:var(--muted);margin-left:auto}
@@ -723,6 +723,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
       <div class="fl"><label>Type</label><select id="fType"></select></div>
       <div class="fl"><label>Has time</label><select id="fTime">
         <option value="all">Any</option><option value="yes">Logged</option><option value="no">Not logged</option></select></div>
+      <div class="fl" id="fPeriodCustom" style="display:none"><input type="date" id="fFrom" class="an-date"/><span style="color:var(--muted);font-size:12px">to</span><input type="date" id="fTo" class="an-date"/></div>
       <div class="period-seg" id="periodSeg">
         <button data-p="all" class="on">All time</button>
         <button data-p="today">Today</button>
@@ -730,9 +731,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
         <button data-p="month">This month</button>
         <button data-p="custom">Custom</button>
       </div>
-      <div class="fl" id="fPeriodCustom" style="display:none"><input type="date" id="fFrom" class="an-date"/><span style="color:var(--muted);font-size:12px">to</span><input type="date" id="fTo" class="an-date"/></div>
       <button class="filter-clear" id="clearFilters">Clear all</button>
-      <div class="filter-count" id="filterCount"></div>
     </div>
 
     <div class="scroll" id="scroll">
@@ -1673,11 +1672,7 @@ function refreshViews(){ const v=ui.view;
   if(v==='board') renderBoard(); else if(v==='list') renderList(); else if(v==='epics') renderEpics();
   else if(v==='overview') renderOverview(); else if(v==='team') renderTeam(); else if(v==='analytics') renderAnalytics();
   renderProjectSwitch(); renderSideCard(); updateCount(); }
-function updateCount(){ if(!['board','list','epics'].includes(ui.view)) return;
-  const n=filteredTasks().length; const tot=filteredTasks().reduce((a,t)=>a+taskTotals(t.id).total,0);
-  if(ui.view==='epics'){ const ne=store.epics().filter(e=>ui.project==='all'||e.project===ui.project).length;
-    document.getElementById('filterCount').innerHTML=`<b>${ne}</b> epic${ne!==1?'s':''}`; return; }
-  document.getElementById('filterCount').innerHTML=`<b>${n}</b> ticket${n!==1?'s':''} · <b>${hm(tot)}</b> logged`; }
+function updateCount(){ return; }
 
 const VIEW_TITLE={overview:'Overview',board:'Board',list:'List',epics:'Epics',team:'Team',
   analytics:'Analytics',reports:'Reports',operations:'Operations',settings:'Settings'};
