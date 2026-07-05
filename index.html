@@ -910,6 +910,9 @@ input,select,textarea{font-family:inherit;font-size:13px}
 /* Card dialogue: dark section lines */
 .panel .cmt-input,.panel .tl-item::before{border-color:#1A1A1A !important}
 .panel .ov,.panel .ov-i,.panel .tsb,.panel .tsb-total,.panel .act-tabs,.panel .pdesc{border-color:#1A1A1A !important}
+.panel .ov,.panel .ov-i{border:0 !important}
+.panel .act-tabs{border-bottom:0 !important}
+.panel .ov-i:nth-child(3n+1){padding-left:0}
 .panel-h{border-bottom:0 !important}
 .pnl-side{border-left:0 !important}
 .panel .tl-item::before{background:#1A1A1A !important}
@@ -1154,8 +1157,8 @@ input,select,textarea{font-family:inherit;font-size:13px}
    ►► SUPABASE CONFIG — paste your two values here to go live.
    Leave as-is to run in local (single-browser) demo mode.
 ============================================================ */
-const SUPABASE_URL  = "https://xskzexadvvcpjsnldtga.supabase.co";
-const SUPABASE_ANON = "sb_publishable_ZHh7fy99zvHj_bm72KX8Cg_VbA7LrDu";
+const SUPABASE_URL  = "PASTE_PROJECT_URL_HERE";
+const SUPABASE_ANON = "PASTE_ANON_KEY_HERE";
 
 /* ============================================================
    DATA LAYER  —  reads stay in-memory (store.data); writes sync
@@ -1300,7 +1303,7 @@ const store = {
   // writes
   moveTask(id, statusId){ const t=this.task(id); if(!t) return; t.status=statusId; this._applyResolution(t); t.updatedAt=today(); this._persist(); },
   _applyResolution(t){ const s=this.status(t.status); const cat=s?s.cat:'todo';
-    if(cat==='done'){ t.resolution='Done'; if(!t.resolvedAt) t.resolvedAt=today(); }
+    if(cat==='done'){ t.resolution='Done'; if(!t.resolvedAt){ t.resolvedAt=today(); t.resolvedTs=new Date().toISOString(); } }
     else { t.resolution='Unresolved'; t.resolvedAt=null; } },
   updateTask(id, patch){ const t=this.task(id); if(!t) return; try{ this._logChanges(t, patch); }catch(e){} Object.assign(t, patch); if('status' in patch) this._applyResolution(t); t.updatedAt=today(); this._persist(); },
   _actor(){ return (typeof CURRENT_UID!=='undefined'&&CURRENT_UID)||((this.users()[0]||{}).id)||null; },
@@ -1903,11 +1906,11 @@ function openPanel(id, keepScroll){
   const cdVal=(field)=>`<button class="fval p-cd${field==='due'&&pOver?' over':''}" data-id="${id}" data-field="${field}">${t[field]?fdate(t[field]):'<span class="fv-none">None</span>'}</button>`;
   const dtRow=(label,val,ed=true)=>`<div class="dt-row"><span class="dt-l">${label}</span><div class="dt-v">${val}</div><span class="dt-ind ${ed?'ed':'lk'}" title="${ed?'Editable':'Read-only'}">${ed?EDIT_ICO:LOCK_ICO}</span></div>`;
   const tlEvents=[];
-  if(t.createdAt) tlEvents.push({by:t.reporter, text:'created this ticket', at:t.createdAt});
+  if(t.createdAt) tlEvents.push({by:t.reporter, text:'created this ticket', at:t.createdTs||t.createdAt});
   (t.activity||[]).forEach(a=>tlEvents.push({by:a.by, text:a.text, at:a.at}));
   (t.comments||[]).forEach(c=>tlEvents.push({by:c.user, text:'added a comment', at:c.date, note:c.text}));
-  store.data.worklogs.filter(w=>w.task===id).forEach(w=>tlEvents.push({by:w.user, text:`logged ${hm(w.min)}${w.cat?' · '+w.cat:''}`, at:w.date, note:w.note}));
-  if(t.resolvedAt) tlEvents.push({by:t.reporter, text:'resolved this ticket', at:t.resolvedAt});
+  store.data.worklogs.filter(w=>w.task===id).forEach(w=>tlEvents.push({by:w.user, text:`logged ${hm(w.min)}${w.cat?' · '+w.cat:''}`, at:w.loggedAt||w.date, note:w.note}));
+  if(t.resolvedAt) tlEvents.push({by:t.reporter, text:'resolved this ticket', at:t.resolvedTs||t.resolvedAt});
   const _ts=x=>new Date((typeof x==='string'&&x.length<=10)?x+'T00:00:00':x).getTime();
   tlEvents.sort((a,b)=>_ts(b.at)-_ts(a.at));
   const panel=document.getElementById('panel');
@@ -1948,10 +1951,6 @@ function openPanel(id, keepScroll){
     </div>
     <div class="panel-body">
       <div class="pnl-main">
-        <div class="pb-sec">
-          <div class="pb-h">Description</div>
-          <textarea id="pDesc" class="pdesc" placeholder="Add a description…">${esc(t.desc||'')}</textarea>
-        </div>
         <div class="ov">
           <div class="ov-i"><div class="ov-l">Time spent</div><div class="ov-time">${hm(tot.total)}</div></div>
           <div class="ov-i"><div class="ov-l">Reporter</div>${ovChip(t.reporter)}</div>
@@ -1959,6 +1958,10 @@ function openPanel(id, keepScroll){
           <div class="ov-i"><div class="ov-l">QA</div>${ovChip(t.qa)}</div>
           <div class="ov-i"><div class="ov-l">Code Reviewer</div>${ovChip(t.reviewer)}</div>
           <div class="ov-i"><div class="ov-l">Deployer</div>${ovChip(t.deployer)}</div>
+        </div>
+        <div class="pb-sec">
+          <div class="pb-h">Description</div>
+          <textarea id="pDesc" class="pdesc" placeholder="Add a description…">${esc(t.desc||'')}</textarea>
         </div>
         <div class="tsb">
           <div class="tsb-h">Time spent by category</div>
@@ -2111,7 +2114,7 @@ function saveLog(){
   const uid=document.getElementById('logWho').value;
   const date=document.getElementById('logDate').value||today();
   const note=document.getElementById('logNote').value.trim();
-  store.addWorklog({id:'w'+Date.now(), task:id, user:uid, cat, min:spent, date, note});
+  store.addWorklog({id:'w'+Date.now(), task:id, user:uid, cat, min:spent, date, note, loggedAt:new Date().toISOString()});
   // Jira behaviour: entered "time remaining" resets the estimate relative to new logged total
   const remStr=document.getElementById('logRem').value.trim();
   if(remStr!==''){ const rem=parseDur(remStr); if(rem!=null){ const newLogged=taskTotals(id).total; store.updateTask(id,{estimate:newLogged+rem}); } }
@@ -2135,7 +2138,7 @@ function createTask(){
     color:isEpic?SWATCHES[2+(store.epics().length%6)]:undefined,
     due:document.getElementById('ntDue').value||null, start:document.getElementById('ntStart').value||null,
     estimate: est>0?Math.round(est*60):null,
-    resolution:'Unresolved', createdAt:today(), updatedAt:today(), resolvedAt:null,
+    resolution:'Unresolved', createdAt:today(), createdTs:new Date().toISOString(), updatedAt:today(), resolvedAt:null,
     desc:document.getElementById('ntDesc').value.trim() };
   store._applyResolution(t);
   store.addTask(t); closeModal(); refreshViews(); toast(`${t.key} created`); openPanel(t.id);
