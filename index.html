@@ -405,6 +405,18 @@ input,select,textarea{font-family:inherit;font-size:13px}
   display:grid;place-items:center;flex:none}
 .icon-btn:hover{background:var(--surface-3);color:var(--ink-2)}
 .panel-body{flex:1;overflow-y:auto;padding:18px 22px 30px}
+.ov{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 16px;background:var(--surface-2);border:1px solid var(--line);
+  border-radius:12px;padding:14px 16px;margin-bottom:20px}
+.ov-i{display:flex;flex-direction:column;gap:5px;min-width:0}
+.ov-l{font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.ov-time{font-size:16px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.ov-p{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.ov-nm{font-size:12.5px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ov-none{font-size:12.5px;color:var(--faint)}
+.p-cd{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:8px 10px;width:100%;
+  display:inline-flex;align-items:center;justify-content:space-between;gap:6px;font-size:13px;color:var(--ink);cursor:pointer}
+.p-cd:hover{border-color:var(--faint)}
+.p-cd .cfchev{color:var(--muted)}
 .meta-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px 20px;margin-bottom:20px}
 .meta-item .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:5px}
 .meta-item .v{font-size:13px;color:var(--ink);display:flex;align-items:center;gap:7px}
@@ -866,6 +878,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
         <input id="search" placeholder="Search tickets…"/>
       </div>
+      <button class="btn primary" id="newTaskBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>Create ticket</button>
     </div>
 
     <div class="filterbar" id="filterbar">
@@ -1557,9 +1570,10 @@ function openDateMenu(anchor, taskId, cur, field){
       <div class="dm-grid">${cells}</div>
       <div class="dm-foot"><button class="dm-today">Today</button><button class="dm-clear">Clear</button></div></div>`;
     menu.querySelectorAll('.dm-nav').forEach(b=>b.onclick=e=>{ e.stopPropagation(); vm+=+b.dataset.nav; if(vm<0){vm=11;vy--;} if(vm>11){vm=0;vy++;} render(); });
-    menu.querySelectorAll('.dm-cell[data-d]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); store.updateTask(taskId,{[field]:b.dataset.d}); menu.classList.remove('on'); refreshViews(); });
-    menu.querySelector('.dm-today').onclick=e=>{ e.stopPropagation(); store.updateTask(taskId,{[field]:today()}); menu.classList.remove('on'); refreshViews(); };
-    menu.querySelector('.dm-clear').onclick=e=>{ e.stopPropagation(); store.updateTask(taskId,{[field]:null}); menu.classList.remove('on'); refreshViews(); };
+    const after=()=>{ menu.classList.remove('on'); refreshViews(); if(ui.openTask===taskId && document.getElementById('panel').classList.contains('on')) openPanel(taskId, true); };
+    menu.querySelectorAll('.dm-cell[data-d]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); store.updateTask(taskId,{[field]:b.dataset.d}); after(); });
+    menu.querySelector('.dm-today').onclick=e=>{ e.stopPropagation(); store.updateTask(taskId,{[field]:today()}); after(); };
+    menu.querySelector('.dm-clear').onclick=e=>{ e.stopPropagation(); store.updateTask(taskId,{[field]:null}); after(); };
   };
   render();
   const r=anchor.getBoundingClientRect(); posMenu(menu, r, 6, 260, false);
@@ -1696,6 +1710,9 @@ function openPanel(id, keepScroll){
   const proj=store.project(t.project);
   const stObj=store.status(t.status); const stCat=stObj?stObj.cat:'todo';
   const remaining = (t.estimate||0) - tot.total;
+  const peopleOpts=(cur)=>`<option value="">Unassigned</option>`+store.users().map(u=>`<option value="${u.id}" ${u.id===cur?'selected':''}>${u.name}</option>`).join('');
+  const ovChip=(uid)=>{ const u=store.user(uid); return u?`<span class="ov-p">${avatar(u,20)}<span class="ov-nm">${esc(u.name)}</span></span>`:'<span class="ov-none">Unassigned</span>'; };
+  const cdBtn=(field)=>`<button class="cdate p-cd" data-id="${id}" data-field="${field}">${t[field]?fdate(t[field]):'<span class="cf-muted">Set date</span>'}<svg class="cfchev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>`;
   const panel=document.getElementById('panel');
   const prevScroll = keepScroll ? (panel.querySelector('.panel-body')||{}).scrollTop : 0;
 
@@ -1733,14 +1750,25 @@ function openPanel(id, keepScroll){
       <button class="icon-btn" id="panelClose"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="panel-body">
+      <div class="ov">
+        <div class="ov-i"><div class="ov-l">Time spent</div><div class="ov-time">${hm(tot.total)}</div></div>
+        <div class="ov-i"><div class="ov-l">Reporter</div>${ovChip(t.reporter)}</div>
+        <div class="ov-i"><div class="ov-l">Developer</div>${ovChip(t.assignee)}</div>
+        <div class="ov-i"><div class="ov-l">QA</div>${ovChip(t.qa)}</div>
+        <div class="ov-i"><div class="ov-l">Code Reviewer</div>${ovChip(t.reviewer)}</div>
+        <div class="ov-i"><div class="ov-l">Deployer</div>${ovChip(t.deployer)}</div>
+      </div>
       <div class="meta-grid">
         <div class="meta-item"><div class="l">Status</div><select id="pStatus">${(function(){ const bd=activeBoard(); const allow=bd.enforce?[t.status,...allowedTargets(bd,t.status)]:STATUSES.map(s=>s.id); return STATUSES.filter(s=>allow.includes(s.id)).map(s=>`<option value="${s.id}" ${s.id===t.status?'selected':''}>${esc(s.name)}</option>`).join(''); })()}</select></div>
-        <div class="meta-item"><div class="l">Assignee</div><select id="pAssignee"><option value="">Unassigned</option>${store.users().map(u=>`<option value="${u.id}" ${u.id===t.assignee?'selected':''}>${u.name}</option>`).join('')}</select></div>
-        <div class="meta-item"><div class="l">Project</div><select id="pProject"><option value="">Not Assigned</option>${store.projects().map(pr=>`<option value="${pr.id}" ${pr.id===t.project?'selected':''}>${esc(pr.name)}</option>`).join('')}</select></div>
         <div class="meta-item"><div class="l">Priority</div><select id="pPriority">${Object.keys(PRIORITIES).map(p=>`<option ${p===t.priority?'selected':''}>${p}</option>`).join('')}</select></div>
+        <div class="meta-item"><div class="l">Developer</div><select id="pAssignee">${peopleOpts(t.assignee)}</select></div>
+        <div class="meta-item"><div class="l">Quality Analyst</div><select id="pQa">${peopleOpts(t.qa)}</select></div>
+        <div class="meta-item"><div class="l">Code Reviewer</div><select id="pReviewer">${peopleOpts(t.reviewer)}</select></div>
+        <div class="meta-item"><div class="l">Deployer</div><select id="pDeployer">${peopleOpts(t.deployer)}</select></div>
         <div class="meta-item"><div class="l">Reporter</div><select id="pReporter"><option value="">—</option>${store.users().map(u=>`<option value="${u.id}" ${u.id===t.reporter?'selected':''}>${u.name}</option>`).join('')}</select></div>
-        <div class="meta-item"><div class="l">Start date</div><input id="pStart" type="date" value="${t.start||''}"/></div>
-        <div class="meta-item"><div class="l">Due date</div><input id="pDue" type="date" value="${t.due||''}"/></div>
+        <div class="meta-item"><div class="l">Project</div><select id="pProject"><option value="">Not Assigned</option>${store.projects().map(pr=>`<option value="${pr.id}" ${pr.id===t.project?'selected':''}>${esc(pr.name)}</option>`).join('')}</select></div>
+        <div class="meta-item"><div class="l">Start date</div><div class="v">${cdBtn('start')}</div></div>
+        <div class="meta-item"><div class="l">Due date</div><div class="v">${cdBtn('due')}</div></div>
         <div class="meta-item"><div class="l">Original estimate</div><input id="pEstimate" type="number" step="0.25" min="0" placeholder="hrs" value="${t.estimate?(t.estimate/60):''}"/></div>
         <div class="meta-item"><div class="l">Epic</div><select id="pParent"><option value="">None</option>${store.epics().filter(x=>x.project===t.project).map(x=>`<option value="${x.id}" ${x.id===t.parent?'selected':''}>${esc(x.title)}</option>`).join('')}</select></div>
         <div class="meta-item"><div class="l">Resolution</div><div class="v"><span class="tag" style="background:${t.resolution==='Done'?'var(--good-soft,#E4F3EC)':'var(--surface-2)'};color:${t.resolution==='Done'?'var(--good)':'var(--muted)'}">${t.resolution||'Unresolved'}</span></div></div>
@@ -1768,12 +1796,14 @@ function openPanel(id, keepScroll){
   // wire panel
   document.getElementById('panelClose').onclick=closePanel;
   document.getElementById('pStatus').onchange=e=>{ store.updateTask(id,{status:e.target.value}); refreshViews(); openPanel(id,true); toast('Status updated'); };
-  document.getElementById('pAssignee').onchange=e=>{ store.updateTask(id,{assignee:e.target.value||null}); refreshViews(); };
+  document.getElementById('pAssignee').onchange=e=>{ store.updateTask(id,{assignee:e.target.value||null}); refreshViews(); openPanel(id,true); };
+  document.getElementById('pQa').onchange=e=>{ store.updateTask(id,{qa:e.target.value||null}); openPanel(id,true); };
+  document.getElementById('pReviewer').onchange=e=>{ store.updateTask(id,{reviewer:e.target.value||null}); openPanel(id,true); };
+  document.getElementById('pDeployer').onchange=e=>{ store.updateTask(id,{deployer:e.target.value||null}); openPanel(id,true); };
   document.getElementById('pProject').onchange=e=>{ store.updateTask(id,{project:e.target.value||null}); refreshViews(); openPanel(id,true); };
   document.getElementById('pPriority').onchange=e=>{ store.updateTask(id,{priority:e.target.value}); refreshViews(); };
   document.getElementById('pReporter').onchange=e=>{ store.updateTask(id,{reporter:e.target.value||null}); openPanel(id,true); };
-  document.getElementById('pStart').onchange=e=>{ store.updateTask(id,{start:e.target.value||null}); };
-  document.getElementById('pDue').onchange=e=>{ store.updateTask(id,{due:e.target.value||null}); refreshViews(); };
+  panel.querySelectorAll('.p-cd').forEach(el=>{ el.onclick=e=>{ e.stopPropagation(); const f=el.dataset.field||'due'; openDateMenu(el, el.dataset.id, (store.task(el.dataset.id)||{})[f], f); }; });
   document.getElementById('pEstimate').onchange=e=>{ const h=parseFloat(e.target.value); store.updateTask(id,{estimate:h>0?Math.round(h*60):null}); openPanel(id,true); };
   document.getElementById('pParent').onchange=e=>{ store.updateTask(id,{parent:e.target.value||null}); };
   wireCustomEdits(panel, ()=>openPanel(id,true));
