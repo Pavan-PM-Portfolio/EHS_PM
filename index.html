@@ -24,17 +24,17 @@
 html,body{height:auto;min-height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);
   font-family:Inter,system-ui,sans-serif;font-weight:450;line-height:1.5;
-  -webkit-font-smoothing:antialiased;overflow:hidden}
+  -webkit-font-smoothing:antialiased}
 h1,h2,h3,.dsp,.num{font-family:"Inter",Inter,sans-serif}
 .num{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 button{font-family:inherit;cursor:pointer}
 input,select,textarea{font-family:inherit;font-size:13px}
 
 /* ---------- App shell: sidebar + main ---------- */
-.app{display:flex;min-height:100vh}
-.sidebar{width:248px;flex:none;background:var(--sidebar);border-right:1px solid var(--line);
+.app{display:block;min-height:100vh}
+.sidebar{width:248px;background:var(--sidebar);border-right:1px solid var(--line);
   display:flex;flex-direction:column;padding:12px 12px 14px;
-  position:sticky;top:0;height:100vh;align-self:flex-start;overflow-y:auto}
+  position:fixed;left:0;top:0;height:100vh;overflow-y:auto;z-index:40}
 /* workspace / project switcher */
 .ws{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer;position:relative;transition:.12s}
 .ws:hover{background:var(--surface-3)}
@@ -78,7 +78,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .side-foot{display:flex;align-items:center;gap:8px;padding:12px 8px 2px;font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
 
 /* main */
-.content{flex:1;min-width:0}
+.content{margin-left:248px;min-width:0}
 .topbar{display:flex;align-items:center;gap:14px;padding:13px 22px;border-bottom:1px solid var(--line);
   background:var(--bg);flex:none}
 .page-title{font-size:16px;font-weight:600;letter-spacing:-.02em}
@@ -151,7 +151,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .filter-count b{color:var(--ink-2);font-weight:600}
 
 /* ---------- Board ---------- */
-.scroll{overflow-x:auto}
+.scroll{overflow:visible}
 .board{display:flex;gap:14px;padding:18px 20px;min-width:max-content;align-items:flex-start}
 .col{width:310px;flex:none;display:flex;flex-direction:column;background:var(--surface-3);
   border:1px solid var(--line);border-radius:11px}
