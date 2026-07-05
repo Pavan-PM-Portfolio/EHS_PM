@@ -946,7 +946,7 @@ const today = () => new Date().toISOString().slice(0,10);
 let STATUSES = []; // live reference to store.data.statuses after load
 
 const SEED = {
-  settings:{ workspaceName:'EduHubSpot', defaultView:'board', defaultBoard:'main', fields:[{"id":"cfProject","name":"Project","type":"select","options":["Tech Delivery","Website - Frontend","Website - Backend","Database","Admin","LMS","Marketing Pages"],"onCard":true}] },
+  settings:{ workspaceName:'EduHubSpot', defaultView:'board', defaultBoard:'main', fields:[] },
   projects:[{"id": "tech", "name": "Tech Delivery", "key": "TECH2026", "color": "#EF5A2A"},{"id":"webfe","name":"Website - Frontend","key":"WFE","color":"#2743E0"},{"id":"webbe","name":"Website - Backend","key":"WBE","color":"#0E8FA8"},{"id":"db","name":"Database","key":"DB","color":"#7A3FF2"},{"id":"admin","name":"Admin","key":"ADM","color":"#B96A00"},{"id":"lms","name":"LMS","key":"LMS","color":"#0E8F5A"},{"id":"mkt","name":"Marketing Pages","key":"MKT","color":"#C026D3"}],
   statuses:[
     {id:'backlog',  name:'Back Log',              color:'#9BA3AF', cat:'todo'},
@@ -1269,7 +1269,7 @@ function cardHTML(t){
   return `<div class="card" draggable="true" data-id="${t.id}">
     <div class="card-hdr">
       <div class="card-hdr-l">
-        <span class="card-proj"><span class="hkey">Project:</span> <select class="cedit cedit-proj" data-f="project" style="color:${pcol}"><option value="">—</option>${store.projects().map(pr=>`<option value="${pr.id}" ${t.project===pr.id?'selected':''}>${esc(pr.name)}</option>`).join('')}</select></span>
+        <span class="card-proj"><span class="hkey">Project:</span> <span style="color:${pcol}">${proj?esc(proj.name):'—'}</span></span>
         <span class="card-num"><span class="hkey">Ticket No:</span> ${t.key}</span>
       </div>
     </div>
@@ -1558,6 +1558,7 @@ function openPanel(id, keepScroll){
       <div class="meta-grid">
         <div class="meta-item"><div class="l">Status</div><select id="pStatus">${(function(){ const bd=activeBoard(); const allow=bd.enforce?[t.status,...allowedTargets(bd,t.status)]:STATUSES.map(s=>s.id); return STATUSES.filter(s=>allow.includes(s.id)).map(s=>`<option value="${s.id}" ${s.id===t.status?'selected':''}>${esc(s.name)}</option>`).join(''); })()}</select></div>
         <div class="meta-item"><div class="l">Assignee</div><select id="pAssignee"><option value="">Unassigned</option>${store.users().map(u=>`<option value="${u.id}" ${u.id===t.assignee?'selected':''}>${u.name}</option>`).join('')}</select></div>
+        <div class="meta-item"><div class="l">Project</div><select id="pProject"><option value="">—</option>${store.projects().map(pr=>`<option value="${pr.id}" ${pr.id===t.project?'selected':''}>${esc(pr.name)}</option>`).join('')}</select></div>
         <div class="meta-item"><div class="l">Priority</div><select id="pPriority">${Object.keys(PRIORITIES).map(p=>`<option ${p===t.priority?'selected':''}>${p}</option>`).join('')}</select></div>
         <div class="meta-item"><div class="l">Reporter</div><select id="pReporter"><option value="">—</option>${store.users().map(u=>`<option value="${u.id}" ${u.id===t.reporter?'selected':''}>${u.name}</option>`).join('')}</select></div>
         <div class="meta-item"><div class="l">Start date</div><input id="pStart" type="date" value="${t.start||''}"/></div>
@@ -1590,6 +1591,7 @@ function openPanel(id, keepScroll){
   document.getElementById('panelClose').onclick=closePanel;
   document.getElementById('pStatus').onchange=e=>{ store.updateTask(id,{status:e.target.value}); refreshViews(); openPanel(id,true); toast('Status updated'); };
   document.getElementById('pAssignee').onchange=e=>{ store.updateTask(id,{assignee:e.target.value||null}); refreshViews(); };
+  document.getElementById('pProject').onchange=e=>{ store.updateTask(id,{project:e.target.value||null}); refreshViews(); openPanel(id,true); };
   document.getElementById('pPriority').onchange=e=>{ store.updateTask(id,{priority:e.target.value}); refreshViews(); };
   document.getElementById('pReporter').onchange=e=>{ store.updateTask(id,{reporter:e.target.value||null}); openPanel(id,true); };
   document.getElementById('pStart').onchange=e=>{ store.updateTask(id,{start:e.target.value||null}); };
@@ -2677,4 +2679,3 @@ boot();
 </script>
 </body>
 </html>
-
