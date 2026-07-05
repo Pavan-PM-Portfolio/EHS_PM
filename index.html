@@ -2278,11 +2278,7 @@ async function loadWorkspace(){
   WS=mem.workspace_id; IS_ADMIN=(mem.role==='admin');
   await fetchAll();
   const empty = !(store.data.statuses&&store.data.statuses.length);
-  if(empty){
-    if(IS_ADMIN){ try{ await pushSeed(); await fetchAll(); toast('Workspace set up — data loaded'); }
-      catch(e){ console.error(e); setTimeout(()=>toast('Setup couldn’t write data: '+e.message),400); } }
-    else { setTimeout(()=>toast('This workspace has no data yet — ask an admin to set it up.'),400); }
-  }
+  if(empty){ setTimeout(()=>toast('This workspace has no data yet — an admin needs to run seed.sql.'),400); }
   STATUSES=store.data.statuses||[];
   buildSnap(); applyDefaults(); applyRole();
   document.getElementById('authScreen').style.display='none';
