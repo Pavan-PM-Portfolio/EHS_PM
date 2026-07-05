@@ -153,6 +153,23 @@ input,select,textarea{font-family:inherit;font-size:13px}
 /* ---------- Board ---------- */
 .scroll{overflow:visible}
 .board{display:flex;gap:14px;padding:18px 20px;min-width:max-content;align-items:flex-start}
+.board.grouped{flex-direction:column;align-items:stretch;gap:0;padding:8px 0 20px;min-width:0}
+.swimlane{border-top:1px solid var(--line-2)}
+.swimlane:first-child{border-top:0}
+.swim-h{display:flex;align-items:center;gap:9px;padding:13px 20px 9px;font-size:13.5px;font-weight:600;color:var(--ink);
+  position:sticky;left:0;width:max-content}
+.swim-h .avatar,.swim-h .col-dot{flex:none}
+.swim-count{font-size:11px;color:var(--muted);font-weight:600;background:var(--surface);border:1px solid var(--line);
+  border-radius:20px;padding:1px 8px}
+.swim-cols{display:flex;gap:14px;padding:0 20px 14px;min-width:max-content;align-items:flex-start}
+.grp-wrap{position:relative;margin-right:8px}
+.grp-menu{position:absolute;top:calc(100% + 6px);left:0;min-width:150px;background:var(--surface);border:1px solid var(--line);
+  border-radius:10px;box-shadow:var(--shadow-md);padding:5px;z-index:60;display:none}
+.grp-menu.on{display:block}
+.grp-menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:8px 9px;border-radius:7px;
+  font-size:12.5px;color:var(--ink);cursor:pointer}
+.grp-menu button:hover{background:var(--surface-2)}
+.grp-menu button.on{color:var(--accent);font-weight:600}
 .col{width:310px;flex:none;display:flex;flex-direction:column;background:var(--surface-3);
   border:1px solid var(--line);border-radius:11px}
 .col.dragover{border-color:var(--accent);background:var(--accent-soft)}
@@ -665,6 +682,16 @@ input,select,textarea{font-family:inherit;font-size:13px}
     <div class="topbar">
       <div class="page-title" id="pageTitle">Board</div>
       <div class="board-switch" id="boardSwitch">
+        <div class="grp-wrap">
+          <button class="btn" id="groupBtn">Group: <span id="groupLbl">None</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></button>
+          <div class="grp-menu" id="groupMenu">
+            <button data-grp="none" class="on">None</button>
+            <button data-grp="assignee">Assignee</button>
+            <button data-grp="epic">Epic</button>
+            <button data-grp="priority">Priority</button>
+            <button data-grp="type">Type</button>
+          </div>
+        </div>
         <button class="btn" id="boardFlowBtn" title="Boards, columns & workflow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="12" r="2"/><path d="M8 6h6a2 2 0 0 1 2 2v2M8 18h6a2 2 0 0 0 2-2v-2"/></svg>Flow</button>
       </div>
       <div class="spacer"></div>
@@ -1015,7 +1042,7 @@ function fdate(d){ if(!d) return '—'; const [y,m,dd]=d.split('-'); return dd+'
 /* ============================================================
    VIEW STATE + RENDER
 ============================================================ */
-const ui = { view:'board', project:'all', openTask:null, board:'main', analyticsTab:'delivery', anPeriod:'all', anFrom:'', anTo:'',
+const ui = { view:'board', project:'all', openTask:null, board:'main', groupBy:'none', analyticsTab:'delivery', anPeriod:'all', anFrom:'', anTo:'',
   report:{ kind:'summary', groupBy:'assignee', measure:'count',
     fields:['key','title','status','priority','assignee','due','logged'],
     f:{ project:'all', assignee:'all', status:'all', priority:'all', type:'all', epic:'all', hasTime:'any', overdue:'any', dateField:'none', from:'', to:'' } },
@@ -1098,15 +1125,8 @@ function cardHTML(t){
     </div></div>`;
 }
 
-function renderBoard(){
-  const board=document.getElementById('board');
-  const bd=activeBoard();
-  if(!bd){ board.innerHTML=`<div class="empty" style="margin:40px auto"><div class="big">No board yet</div>This workspace hasn’t been set up. An admin needs to load data (Settings → reset), or check the console for a setup error.</div>`; return; }
-  const tasks=filteredTasks();
-  const cols=store.boardColumns(bd);
-  const shownIds=cols.map(s=>s.id);
-  const hidden=tasks.filter(t=>!shownIds.includes(t.status)).length;
-  board.innerHTML=cols.map(s=>{
+function boardColsHTML(cols, tasks){
+  return cols.map(s=>{
     const col=tasks.filter(t=>t.status===s.id);
     const mins=col.reduce((a,t)=>a+taskTotals(t.id).total,0);
     return `<div class="col" data-status="${s.id}">
@@ -1115,7 +1135,44 @@ function renderBoard(){
         ${mins?`<span class="time">${hm(mins)}</span>`:''}</div>
       <div class="col-body">${col.map(cardHTML).join('')||'<div style="padding:8px 4px;font-size:11.5px;color:var(--faint)">No tickets</div>'}</div>
     </div>`;
-  }).join('') + (hidden?`<div class="col" style="border-style:dashed;opacity:.7"><div class="col-h"><span class="t" style="color:var(--muted)">Not on this board</span><span class="c">${hidden}</span></div><div class="col-body"><div style="padding:8px 4px;font-size:11px;color:var(--faint)">${hidden} ticket${hidden!==1?'s':''} in statuses this board doesn't show.</div></div></div>`:'');
+  }).join('');
+}
+function groupValue(t,g){ if(g==='assignee')return t.assignee||'__un'; if(g==='epic')return t.parent||'__noepic'; if(g==='priority')return t.priority; if(g==='type')return t.type; return '__all'; }
+function orderGroupKeys(g,keys){
+  if(g==='assignee'){ const o=store.users().map(u=>u.id); return keys.sort((a,b)=>a==='__un'?1:b==='__un'?-1:o.indexOf(a)-o.indexOf(b)); }
+  if(g==='epic'){ const o=store.epics().map(e=>e.id); return keys.sort((a,b)=>a==='__noepic'?1:b==='__noepic'?-1:o.indexOf(a)-o.indexOf(b)); }
+  if(g==='priority'){ const o=['Highest','High','Medium','Low']; return keys.sort((a,b)=>o.indexOf(a)-o.indexOf(b)); }
+  if(g==='type'){ const o=['Task','Bug','Epic']; return keys.sort((a,b)=>o.indexOf(a)-o.indexOf(b)); }
+  return keys;
+}
+function groupHeaderHTML(g,key){
+  if(g==='assignee'){ if(key==='__un') return `<span class="avatar" style="width:22px;height:22px;background:#C6CCD6">–</span>Unassigned`; const u=store.user(key); return u?`${avatar(u,22)}${esc(u.name)}`:'Unknown'; }
+  if(g==='epic'){ if(key==='__noepic') return 'No epic'; const e=store.task(key); return e?`<span class="col-dot" style="background:${e.color||'#999'}"></span>${esc(e.title)}`:'Epic'; }
+  if(g==='priority'){ return `<span class="col-dot" style="background:${PRIORITIES[key]||'#999'}"></span>${esc(key)} priority`; }
+  if(g==='type'){ return esc(key); }
+  return '';
+}
+function renderBoard(){
+  const board=document.getElementById('board');
+  const bd=activeBoard();
+  if(!bd){ board.className='board'; board.innerHTML=`<div class="empty" style="margin:40px auto"><div class="big">No board yet</div>This workspace hasn’t been set up. An admin needs to load data (Settings → reset), or check the console for a setup error.</div>`; return; }
+  const tasks=filteredTasks();
+  const cols=store.boardColumns(bd);
+  const shownIds=cols.map(s=>s.id);
+  const hidden=tasks.filter(t=>!shownIds.includes(t.status)).length;
+  const hiddenCol = hidden?`<div class="col" style="border-style:dashed;opacity:.7"><div class="col-h"><span class="t" style="color:var(--muted)">Not on this board</span><span class="c">${hidden}</span></div><div class="col-body"><div style="padding:8px 4px;font-size:11px;color:var(--faint)">${hidden} ticket${hidden!==1?'s':''} in statuses this board doesn't show.</div></div></div>`:'';
+  const g=ui.groupBy||'none';
+  board.classList.toggle('grouped', g!=='none');
+  if(g==='none'){
+    board.innerHTML = boardColsHTML(cols, tasks) + hiddenCol;
+  } else {
+    const groups={}; tasks.forEach(t=>{ const k=groupValue(t,g); (groups[k]=groups[k]||[]).push(t); });
+    const keys=orderGroupKeys(g, Object.keys(groups));
+    board.innerHTML = keys.map(k=>`<div class="swimlane">
+      <div class="swim-h">${groupHeaderHTML(g,k)}<span class="swim-count">${groups[k].length}</span></div>
+      <div class="swim-cols">${boardColsHTML(cols, groups[k])}</div></div>`).join('')
+      + (hidden?`<div class="swimlane"><div class="swim-h" style="color:var(--muted)">Not on this board<span class="swim-count">${hidden}</span></div><div class="swim-cols">${boardColsHTML(cols, tasks.filter(t=>!shownIds.includes(t.status)))}</div></div>`:'');
+  }
   attachCardEvents(board);
   attachDnD(board);
 }
@@ -2198,6 +2255,12 @@ let toastT; function toast(msg){ const el=document.getElementById('toast'); el.t
 document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 document.getElementById('navColumns').onclick=openBoardSettings;
 document.getElementById('boardFlowBtn').onclick=openBoardSettings;
+document.getElementById('groupBtn').onclick=e=>{ e.stopPropagation(); document.getElementById('groupMenu').classList.toggle('on'); };
+document.querySelectorAll('#groupMenu button').forEach(b=>b.onclick=()=>{ const g=b.dataset.grp; ui.groupBy=g;
+  document.getElementById('groupLbl').textContent=b.textContent;
+  document.querySelectorAll('#groupMenu button').forEach(x=>x.classList.toggle('on', x===b));
+  document.getElementById('groupMenu').classList.remove('on'); renderBoard(); });
+document.addEventListener('click',()=>document.getElementById('groupMenu').classList.remove('on'));
 document.getElementById('navAddBoard').onclick=e=>{ e.stopPropagation(); document.getElementById('navBoardsToggle').classList.add('open'); addBoardFromSide(); };
 document.getElementById('pkAvatar').onclick=e=>{ e.stopPropagation(); document.getElementById('acctMenu').classList.toggle('on'); };
 document.addEventListener('click',()=>document.getElementById('acctMenu').classList.remove('on'));
@@ -2393,4 +2456,3 @@ boot();
 </script>
 </body>
 </html>
-
