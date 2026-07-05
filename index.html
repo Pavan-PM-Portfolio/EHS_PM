@@ -13,7 +13,7 @@
   --sidebar:#FBFAF9;
   --ink:#1A1A1A; --ink-2:#3F3F3F; --muted:#71717A; --faint:#A1A1A6;
   --line:#EAE7E2; --line-2:#F0EEEA;
-  --accent:#EF5A2A; --accent-hover:#DC4E22; --accent-soft:#FCEEE7;
+  --accent:#3B6FE0; --accent-hover:#2F5FD0; --accent-soft:#EAF1FD;
   --dev:#2743E0; --review:#B96A00; --qa:#CE2F26; --deploy:#0E8F5A;
   --good:#0E8F5A; --good-soft:#E4F3EC; --warn:#B96A00; --crit:#CE2F26;
   --r:10px;
@@ -39,9 +39,9 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .tn-logo-txt .b{color:#3B6FE0}
 .tn-links{display:flex;gap:30px;align-items:center;height:100%;flex:1;justify-content:center}
 .tn-item{display:inline-flex;align-items:center;gap:7px;border:0;background:none;font-family:inherit;font-size:13px;
-  font-weight:500;color:var(--muted);cursor:pointer;height:100%;border-bottom:2.5px solid transparent;padding:0;line-height:1}
+  font-weight:500;color:var(--muted);cursor:pointer;height:100%;padding:0;line-height:1}
 .tn-item:hover{color:var(--ink-2)}
-.tn-item.active{color:#3B6FE0;font-weight:600;border-bottom-color:#3B6FE0}
+.tn-item.active{color:var(--accent);font-weight:600}
 .tn-item svg{flex:none;width:17px;height:17px}
 .tn-div{width:1px;height:24px;background:var(--line);flex:none}
 .app{flex:1;min-height:0;display:flex;overflow:hidden}
@@ -166,9 +166,10 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .filter-clear{border:0;background:none;color:var(--accent);font-size:12px;font-weight:600;padding:6px 4px;flex:none}
 .chips{display:flex;align-items:center;gap:20px;flex:none}
 .chip{display:inline-flex;align-items:center;gap:6px;border:0;background:none;
-  padding:5px 2px;flex:none;cursor:pointer;transition:.12s;font-family:inherit}
+  padding:5px 2px;flex:none;cursor:pointer;transition:.12s;font-family:inherit;border-bottom:2px solid transparent}
 .chip:hover .chip-lbl,.chip:hover .chip-ico{color:var(--ink-2)}
-.chip.active .chip-lbl,.chip.active .chip-val,.chip.active .chip-ico,.chip.active .chip-chev{color:#3B6FE0}
+.chip.active{border-bottom-color:var(--accent)}
+.chip.active .chip-lbl,.chip.active .chip-val,.chip.active .chip-ico,.chip.active .chip-chev{color:var(--accent)}
 .chip-ico{color:var(--muted);flex:none;width:15px;height:15px}
 .chip-lbl{font-size:12.5px;color:var(--muted);white-space:nowrap}
 .chip-val{font-size:12.5px;font-weight:600;color:var(--ink);max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1039,7 +1040,7 @@ let STATUSES = []; // live reference to store.data.statuses after load
 
 const SEED = {
   settings:{ workspaceName:'EduHubSpot', defaultView:'board', defaultBoard:'main', fields:[] },
-  projects:[{"id": "tech", "name": "Tech Delivery", "key": "TECH2026", "color": "#EF5A2A"},{"id":"webfe","name":"Website - Frontend","key":"WFE","color":"#2743E0"},{"id":"webbe","name":"Website - Backend","key":"WBE","color":"#0E8FA8"},{"id":"db","name":"Database","key":"DB","color":"#7A3FF2"},{"id":"admin","name":"Admin","key":"ADM","color":"#B96A00"},{"id":"lms","name":"LMS","key":"LMS","color":"#0E8F5A"},{"id":"mkt","name":"Marketing Pages","key":"MKT","color":"#C026D3"}],
+  projects:[{"id": "tech", "name": "Tech Delivery", "key": "TECH2026", "color": "#3B6FE0"},{"id":"webfe","name":"Website - Frontend","key":"WFE","color":"#2743E0"},{"id":"webbe","name":"Website - Backend","key":"WBE","color":"#0E8FA8"},{"id":"db","name":"Database","key":"DB","color":"#7A3FF2"},{"id":"admin","name":"Admin","key":"ADM","color":"#B96A00"},{"id":"lms","name":"LMS","key":"LMS","color":"#0E8F5A"},{"id":"mkt","name":"Marketing Pages","key":"MKT","color":"#C026D3"}],
   statuses:[
     {id:'backlog',  name:'Back Log',              color:'#9BA3AF', cat:'todo'},
     {id:'ready',    name:'Ready for Development', color:'#6B7280', cat:'todo'},
@@ -1273,8 +1274,8 @@ function filteredTasks(){
   });
 }
 
-const PROJ_COLORS={all:'#EF5A2A', webfe:'#2743E0', webbe:'#0E8FA8', db:'#7A3FF2', admin:'#B96A00', lms:'#0E8F5A', mkt:'#C026D3'};
-function projColor(id){ if(id==='all') return '#EF5A2A'; const p=store.project(id); return (p&&p.color)||PROJ_COLORS[id]||'#8A8F98'; }
+const PROJ_COLORS={all:'#3B6FE0', webfe:'#2743E0', webbe:'#0E8FA8', db:'#7A3FF2', admin:'#B96A00', lms:'#0E8F5A', mkt:'#C026D3'};
+function projColor(id){ if(id==='all') return '#3B6FE0'; const p=store.project(id); return (p&&p.color)||PROJ_COLORS[id]||'#8A8F98'; }
 function renderProjectSwitch(){
   const cur = ui.project==='all' ? {id:'all',name:'All projects'} : store.project(ui.project);
   const col=projColor(cur.id);
