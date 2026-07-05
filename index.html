@@ -387,8 +387,14 @@ input,select,textarea{font-family:inherit;font-size:13px}
 /* ---------- List ---------- */
 .listwrap{padding:18px 20px}
 .ltoolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px;flex-wrap:wrap}
-.ltbar-l{display:flex;align-items:baseline;gap:12px}
+.ltbar-l{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .ltbar-title{font-size:16px;font-weight:600;color:var(--ink)}
+.ltbar-div{width:1px;height:20px;background:var(--line)}
+.chip.lchip{border:1px solid var(--line);padding:8px 12px;gap:7px}
+.chip.lchip:hover{border-color:var(--accent)}
+.chip.lchip:hover .chip-lbl,.chip.lchip:hover .chip-ico,.chip.lchip:hover .chip-val{color:var(--accent)}
+.chip.lchip.active{border-color:var(--accent);background:var(--accent-soft,#EAF1FD)}
+.chip.lchip .chip-lbl{color:var(--ink-2)}
 .ltbar-r{display:flex;align-items:center;gap:18px}
 .lcount{font-size:12.5px;color:var(--muted)}
 .lgroup-row td{background:var(--surface-2);padding:0!important}
@@ -1345,8 +1351,8 @@ input,select,textarea{font-family:inherit;font-size:13px}
    ►► SUPABASE CONFIG — paste your two values here to go live.
    Leave as-is to run in local (single-browser) demo mode.
 ============================================================ */
-const SUPABASE_URL  = "https://xskzexadvvcpjsnldtga.supabase.co";
-const SUPABASE_ANON = "sb_publishable_ZHh7fy99zvHj_bm72KX8Cg_VbA7LrDu";
+const SUPABASE_URL  = "PASTE_PROJECT_URL_HERE";
+const SUPABASE_ANON = "PASTE_ANON_KEY_HERE";
 
 /* ============================================================
    DATA LAYER  —  reads stay in-memory (store.data); writes sync
@@ -1881,10 +1887,10 @@ function renderList(){
   const ICO_GRP='<svg class="chip-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#0891B2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>';
   const boardVal=ui.listBoard==='all'?'All':((store.board(ui.listBoard)||{}).name||'All');
   const grpVal=LGROUPS[ui.listGroup]||'None';
-  const chip=(id,ico,label,val,active)=>`<button class="chip ${active?'active':''}" id="${id}">${ico}<span class="chip-lbl">${label}</span><span class="chip-val">${esc(val)}</span>${CHEV_SVG}</button>`;
+  const chip=(id,ico,label,val,active)=>`<button class="chip lchip ${active?'active':''}" id="${id}">${ico}<span class="chip-lbl">${label}</span><span class="chip-val">${esc(val)}</span>${CHEV_SVG}</button>`;
   const toolbar=`<div class="ltoolbar">
-    <div class="ltbar-l"><span class="ltbar-title">List View</span><span class="lcount">${tasks.length} ticket${tasks.length!==1?'s':''}</span></div>
-    <div class="ltbar-r">${chip('listBoardBtn',ICO_BOARD,'Board',boardVal,ui.listBoard!=='all')}${chip('listGroupBtn',ICO_GRP,'Group',grpVal,ui.listGroup!=='none')}<button class="lcols-btn" id="listColsBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v18M15 3v18"/></svg>Columns</button></div>
+    <div class="ltbar-l"><span class="ltbar-title">List View</span><span class="lcount">${tasks.length} ticket${tasks.length!==1?'s':''}</span><span class="ltbar-div"></span>${chip('listBoardBtn',ICO_BOARD,'Board',boardVal,ui.listBoard!=='all')}${chip('listGroupBtn',ICO_GRP,'Group',grpVal,ui.listGroup!=='none')}</div>
+    <div class="ltbar-r"><button class="lcols-btn" id="listColsBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 3v18M15 3v18"/></svg>Columns</button></div>
   </div>`;
   const wireTop=()=>{ wireListCols();
     document.getElementById('listBoardBtn').onclick=e=>{ e.stopPropagation(); chipMenu(e.currentTarget, boardOpts, ui.listBoard, v=>{ ui.listBoard=v; renderList(); }); };
@@ -2653,7 +2659,6 @@ function createTask(){
 function renderBoardSwitch(){
   const wrap=document.getElementById('navBoards');
   wrap.innerHTML=store.boards().map(bd=>`<div class="nav-item board-nav ${(ui.view==='board'&&bd.id===ui.board)?'on':''}" data-board="${bd.id}">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg>
       <span class="bn-nm">${esc(bd.name)}</span>
       <button class="bn-kebab" title="Board options"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>`).join('');
   wrap.querySelectorAll('.board-nav').forEach(it=>{ const id=it.dataset.board;
