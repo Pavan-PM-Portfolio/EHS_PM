@@ -37,7 +37,7 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .tn-logo-img{height:30px;width:auto;display:block}
 .tn-logo-txt{display:none;align-items:center;font-weight:800;font-size:16px;letter-spacing:-.02em;color:var(--ink)}
 .tn-logo-txt .b{color:#3B6FE0}
-.tn-links{display:flex;gap:30px;align-items:center;height:100%;margin-left:auto}
+.tn-links{display:flex;gap:30px;align-items:center;height:100%;flex:1;justify-content:center}
 .tn-item{display:inline-flex;align-items:center;gap:7px;border:0;background:none;font-family:inherit;font-size:13px;
   font-weight:500;color:var(--muted);cursor:pointer;height:100%;border-bottom:2.5px solid transparent;padding:0;line-height:1}
 .tn-item:hover{color:var(--ink-2)}
@@ -786,10 +786,10 @@ input,select,textarea{font-family:inherit;font-size:13px}
   <nav class="topnav">
     <a class="tn-logo" href="#" onclick="return false"><img src="images/logo.png" alt="EduHubSpot" class="tn-logo-img" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'"><span class="tn-logo-txt">EDU<span class="b">HUB</span>SPOT</span></a>
     <div class="tn-links">
-      <button class="tn-item active" data-mod="pm"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg>Project Management</button>
-      <button class="tn-item" data-mod="delivery"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>Delivery Management</button>
-      <button class="tn-item" data-mod="products"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 22H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7"/><path d="M8 7h8M8 11h5"/><circle cx="17.5" cy="17.5" r="2.5"/><path d="M17.5 20v2M20 17.5h2"/></svg>Products &amp; Licenses</button>
-      <button class="tn-item" data-mod="operations"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Operations Management</button>
+      <button class="tn-item active" data-mod="pm">Project Management</button>
+      <button class="tn-item" data-mod="delivery">Delivery Management</button>
+      <button class="tn-item" data-mod="products">Products &amp; Licenses</button>
+      <button class="tn-item" data-mod="operations">Operations Management</button>
     </div>
     <span class="tn-div"></span>
     <div class="acct-wrap">
@@ -1016,8 +1016,8 @@ input,select,textarea{font-family:inherit;font-size:13px}
    ►► SUPABASE CONFIG — paste your two values here to go live.
    Leave as-is to run in local (single-browser) demo mode.
 ============================================================ */
-const SUPABASE_URL  = "https://xskzexadvvcpjsnldtga.supabase.co";
-const SUPABASE_ANON = "sb_publishable_ZHh7fy99zvHj_bm72KX8Cg_VbA7LrDu";
+const SUPABASE_URL  = "PASTE_PROJECT_URL_HERE";
+const SUPABASE_ANON = "PASTE_ANON_KEY_HERE";
 
 /* ============================================================
    DATA LAYER  —  reads stay in-memory (store.data); writes sync
@@ -1881,7 +1881,7 @@ function renderBoardSwitch(){
   const wrap=document.getElementById('navBoards');
   wrap.innerHTML=store.boards().map(bd=>`<div class="nav-item board-nav ${(ui.view==='board'&&bd.id===ui.board)?'on':''}" data-board="${bd.id}">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg>
-      <span class="bn-nm">${esc(bd.name)}</span>${bd.enforce?'<span class="bn-flow" title="Workflow enforced"></span>':''}
+      <span class="bn-nm">${esc(bd.name)}</span>
       <button class="bn-kebab" title="Board options"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>`).join('');
   wrap.querySelectorAll('.board-nav').forEach(it=>{ const id=it.dataset.board;
     it.onclick=e=>{ if(e.target.closest('.bn-kebab')) return; ui.board=id; setView('board'); };
