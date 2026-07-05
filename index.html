@@ -718,6 +718,9 @@ input,select,textarea{font-family:inherit;font-size:13px}
       <div class="fl"><label>Type</label><select id="fType"></select></div>
       <div class="fl"><label>Has time</label><select id="fTime">
         <option value="all">Any</option><option value="yes">Logged</option><option value="no">Not logged</option></select></div>
+      <div class="fl"><label>Period</label><select id="fPeriod">
+        <option value="all">All time</option><option value="today">Today</option><option value="week">This week</option><option value="month">This month</option><option value="custom">Custom</option></select></div>
+      <div class="fl" id="fPeriodCustom" style="display:none"><input type="date" id="fFrom" class="an-date"/><span style="color:var(--muted);font-size:12px">to</span><input type="date" id="fTo" class="an-date"/></div>
       <button class="filter-clear" id="clearFilters">Clear all</button>
       <div class="filter-count" id="filterCount"></div>
     </div>
@@ -1046,13 +1049,35 @@ const ui = { view:'board', project:'all', openTask:null, board:'main', groupBy:'
   report:{ kind:'summary', groupBy:'assignee', measure:'count',
     fields:['key','title','status','priority','assignee','due','logged'],
     f:{ project:'all', assignee:'all', status:'all', priority:'all', type:'all', epic:'all', hasTime:'any', overdue:'any', dateField:'none', from:'', to:'' } },
-  filters:{search:'', assignee:'all', status:'all', priority:'all', type:'all', time:'all', epic:'all'} };
+  filters:{search:'', assignee:'all', status:'all', priority:'all', type:'all', time:'all', epic:'all', period:'all', from:'', to:''} };
 function activeBoard(){ return store.board(ui.board) || (store.boards()&&store.boards()[0]) || null; }
 function allowedTargets(b, from){ return (b.transitions&&b.transitions[from])||[]; }
 function canMove(b, from, to){ if(from===to) return true; if(!b.enforce) return true; return allowedTargets(b, from).includes(to); }
 
+function boardRef(){
+  const ds=[];
+  store.data.tasks.forEach(t=>{ if(t.createdAt)ds.push(t.createdAt); if(t.updatedAt)ds.push(t.updatedAt); if(t.resolvedAt)ds.push(t.resolvedAt); });
+  store.data.worklogs.forEach(w=>{ if(w.date)ds.push(w.date); });
+  ds.sort(); return ds.length?ds[ds.length-1]:today();
+}
+function fInPeriod(dateStr, ref){
+  const f=ui.filters, per=f.period||'all';
+  if(per==='all') return true;
+  if(per==='custom'){ if(!f.from||!f.to) return true; return !!dateStr && dateStr>=f.from && dateStr<=f.to; }
+  if(!dateStr) return false;
+  const r=Date.parse(ref), d=Date.parse(dateStr);
+  if(per==='today') return dateStr===ref;
+  if(per==='week') return d>=r-6*86400000 && d<=r;
+  if(per==='month') return dateStr.slice(0,7)===ref.slice(0,7);
+  return true;
+}
+function tInPeriod(t, ref){
+  if(fInPeriod(t.createdAt,ref)||fInPeriod(t.updatedAt,ref)||fInPeriod(t.resolvedAt,ref)) return true;
+  return store.worklogs(t.id).some(w=>fInPeriod(w.date,ref));
+}
 function filteredTasks(){
   const f=ui.filters;
+  const ref=(f.period&&f.period!=='all')?boardRef():null;
   return store.standardTasks().filter(t=>{
     if(ui.project!=='all' && t.project!==ui.project) return false;
     if(f.epic!=='all'){ if(f.epic==='none'){ if(t.parent) return false; } else if(t.parent!==f.epic) return false; }
@@ -1061,6 +1086,7 @@ function filteredTasks(){
     if(f.priority!=='all' && t.priority!==f.priority) return false;
     if(f.type!=='all' && t.type!==f.type) return false;
     if(f.time!=='all'){ const has=store.worklogs(t.id).length>0; if(f.time==='yes'&&!has) return false; if(f.time==='no'&&has) return false; }
+    if(ref && !tInPeriod(t, ref)) return false;
     if(f.search){ const q=f.search.toLowerCase(); if(!(t.title.toLowerCase().includes(q)||t.key.toLowerCase().includes(q))) return false; }
     return true;
   });
@@ -1090,6 +1116,8 @@ function fillFilters(){
   const es=document.getElementById('fEpic');
   es.innerHTML=`<option value="all">All</option><option value="none" ${ui.filters.epic==='none'?'selected':''}>No epic</option>`+
     eOpts.map(e=>`<option value="${e.id}" ${ui.filters.epic===e.id?'selected':''}>${esc(e.title)}</option>`).join('');
+  const fp=document.getElementById('fPeriod'); if(fp){ fp.value=ui.filters.period||'all';
+    document.getElementById('fPeriodCustom').style.display = ui.filters.period==='custom'?'flex':'none'; }
 }
 
 function cardHTML(t){
@@ -2283,8 +2311,14 @@ document.getElementById('search').oninput=e=>{ ui.filters.search=e.target.value;
 ['fAssignee','fStatus','fPriority','fType','fTime','fEpic'].forEach(id=>{
   document.getElementById(id).onchange=e=>{ const map={fAssignee:'assignee',fStatus:'status',fPriority:'priority',fType:'type',fTime:'time',fEpic:'epic'};
     ui.filters[map[id]]=e.target.value; refreshViews(); }; });
-document.getElementById('clearFilters').onclick=()=>{ ui.filters={search:'',assignee:'all',status:'all',priority:'all',type:'all',time:'all',epic:'all'};
-  document.getElementById('search').value=''; fillFilters(); refreshViews(); };
+document.getElementById('fPeriod').onchange=e=>{ ui.filters.period=e.target.value;
+  document.getElementById('fPeriodCustom').style.display = e.target.value==='custom'?'flex':'none'; refreshViews(); };
+document.getElementById('fFrom').onchange=e=>{ ui.filters.from=e.target.value; refreshViews(); };
+document.getElementById('fTo').onchange=e=>{ ui.filters.to=e.target.value; refreshViews(); };
+document.getElementById('clearFilters').onclick=()=>{ ui.filters={search:'',assignee:'all',status:'all',priority:'all',type:'all',time:'all',epic:'all',period:'all',from:'',to:''};
+  document.getElementById('search').value=''; document.getElementById('fPeriodCustom').style.display='none';
+  const ff=document.getElementById('fFrom'), ft=document.getElementById('fTo'); if(ff)ff.value=''; if(ft)ft.value='';
+  fillFilters(); refreshViews(); };
 document.getElementById('newTaskBtn').onclick=openModal;
 document.getElementById('bsAdd').onclick=()=>{
   if(bsTab==='boards'){ const id=store.addBoard('New board'); ui.board=id; renderBoardSettings(); renderBoardSwitch();
