@@ -139,30 +139,42 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .bn-pop-sep{height:1px;background:var(--line-2);margin:5px 4px}
 
 /* ---------- Filter bar ---------- */
-.filterbar{display:flex;align-items:center;gap:10px;padding:10px 22px;
+.filterbar{display:flex;align-items:center;gap:7px;padding:9px 20px;
   background:var(--bg);border-bottom:1px solid var(--line);flex:none;flex-wrap:nowrap;overflow-x:auto}
 .fl{display:flex;align-items:center;gap:6px;flex:none}
 .fl label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 .fl select{border:1px solid var(--line);background:var(--surface-2);border-radius:7px;padding:6px 8px;
   color:var(--ink-2);outline:none;font-weight:500;max-width:150px}
 .fl select:focus{border-color:var(--accent)}
-.filter-clear{border:0;background:none;color:var(--accent);font-size:12px;font-weight:600;padding:6px 4px}
-.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);
-  border-radius:9px;padding:6px 11px;flex:none;transition:.12s}
+.filter-clear{border:0;background:none;color:var(--accent);font-size:12px;font-weight:600;padding:6px 4px;flex:none}
+.chips{display:flex;align-items:center;gap:7px;flex:none}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);
+  border-radius:8px;padding:5px 9px;flex:none;cursor:pointer;transition:.12s;font-family:inherit}
 .chip:hover{border-color:var(--faint)}
-.chip:focus-within{border-color:var(--accent)}
-.chip-ico{color:var(--muted);flex:none}
-.chip-lbl{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
-.chip-sep{color:var(--faint);font-size:12px}
-.chip-sel{appearance:none;-webkit-appearance:none;border:0;background:transparent;font-family:inherit;
-  font-size:12.5px;font-weight:600;color:var(--ink);outline:none;cursor:pointer;max-width:140px;
-  padding:0 19px 0 0;text-overflow:ellipsis;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23A6ABB3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
-  background-repeat:no-repeat;background-position:right center;background-size:13px}
+.chip.active{border-color:var(--accent);background:var(--accent-soft)}
+.chip-ico{color:var(--muted);flex:none;width:14px;height:14px}
+.chip.active .chip-ico{color:var(--accent)}
+.chip-lbl{font-size:12px;color:var(--muted);white-space:nowrap}
+.chip-val{font-size:12px;font-weight:600;color:var(--ink);max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip.active .chip-val{color:var(--accent)}
+.chip-chev{color:#A6ABB3;flex:none;width:13px;height:13px}
+.fmenu{position:fixed;min-width:210px;max-width:320px;background:var(--surface);border:1px solid var(--line);
+  border-radius:11px;box-shadow:var(--shadow-md);padding:5px;z-index:300;display:none}
+.fmenu.on{display:block}
+.fmenu-search{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:8px;padding:6px 9px;margin:3px 3px 6px}
+.fmenu-search input{border:0;background:none;outline:none;font-family:inherit;font-size:12.5px;color:var(--ink);width:100%}
+.fmenu-search svg{color:var(--faint);flex:none}
+.fmenu-list{max-height:280px;overflow-y:auto}
+.fmenu-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;font-size:13px;color:var(--ink-2);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fmenu-item:hover{background:var(--surface-2)}
+.fmenu-item.sel{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.fmenu-item .fchk{width:15px;flex:none;color:var(--accent)}
+.fmenu-item .fdot{width:8px;height:8px;border-radius:50%;flex:none}
+.fmenu-empty{padding:10px;font-size:12px;color:var(--faint);text-align:center}
 .filter-count{font-size:12px;color:var(--muted);margin-left:auto}
 .filter-count b{color:var(--ink-2);font-weight:600}
-.period-seg{display:inline-flex;background:var(--surface-3);border-radius:10px;padding:3px;gap:2px}
-.period-seg button{border:0;background:none;padding:6px 13px;border-radius:8px;font-size:12.5px;font-weight:500;
+.period-seg{display:inline-flex;background:var(--surface-3);border-radius:9px;padding:3px;gap:2px;flex:none}
+.period-seg button{border:0;background:none;padding:5px 10px;border-radius:7px;font-size:12px;font-weight:500;
   color:var(--muted);cursor:pointer;white-space:nowrap;transition:.12s}
 .period-seg button:hover{color:var(--ink-2)}
 .period-seg button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:var(--shadow-sm)}
@@ -728,23 +740,18 @@ input,select,textarea{font-family:inherit;font-size:13px}
     </div>
 
     <div class="filterbar" id="filterbar">
-      <div class="chip"><svg class="chip-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span class="chip-lbl">Epic</span><span class="chip-sep">·</span><select id="fEpic" class="chip-sel"></select></div>
-      <div class="chip"><svg class="chip-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span class="chip-lbl">Assignee</span><span class="chip-sep">·</span><select id="fAssignee" class="chip-sel"></select></div>
-      <div class="chip"><svg class="chip-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg><span class="chip-lbl">Status</span><span class="chip-sep">·</span><select id="fStatus" class="chip-sel"></select></div>
-      <div class="chip"><svg class="chip-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 21V4M4 4h13l-2 5 2 5H4"/></svg><span class="chip-lbl">Priority</span><span class="chip-sep">·</span><select id="fPriority" class="chip-sel"></select></div>
-      <div class="chip"><svg class="chip-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span class="chip-lbl">Type</span><span class="chip-sep">·</span><select id="fType" class="chip-sel"></select></div>
-      <div class="chip"><svg class="chip-ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span class="chip-lbl">Time</span><span class="chip-sep">·</span><select id="fTime" class="chip-sel">
-        <option value="all">Any</option><option value="yes">Logged</option><option value="no">Not logged</option></select></div>
+      <div class="chips" id="filterChips"></div>
       <div class="fl" id="fPeriodCustom" style="display:none"><input type="date" id="fFrom" class="an-date"/><span style="color:var(--muted);font-size:12px">to</span><input type="date" id="fTo" class="an-date"/></div>
       <div class="period-seg" id="periodSeg">
-        <button data-p="all" class="on">All time</button>
+        <button data-p="all" class="on">All</button>
         <button data-p="today">Today</button>
-        <button data-p="week">This week</button>
-        <button data-p="month">This month</button>
+        <button data-p="week">Week</button>
+        <button data-p="month">Month</button>
         <button data-p="custom">Custom</button>
       </div>
       <button class="filter-clear" id="clearFilters">Clear all</button>
     </div>
+    <div class="fmenu" id="filterMenu"></div>
 
     <div class="scroll" id="scroll">
       <div class="board" id="board"></div>
@@ -1126,17 +1133,57 @@ function renderProjectSwitch(){
   document.querySelectorAll('#wsMenu button').forEach(b=>b.onclick=e=>{ e.stopPropagation(); ui.project=b.dataset.p; document.getElementById('wsMenu').classList.remove('on'); renderAll(); });
 }
 
+const CHEV_SVG='<svg class="chip-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+const FILTER_DEFS=[
+  {key:'epic', label:'Epic', search:true,
+   ico:'<svg class="chip-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+   opts(){ return [{v:'all',t:'All'},{v:'none',t:'No epic'}].concat(store.epics().filter(e=>ui.project==='all'||e.project===ui.project).map(e=>({v:e.id,t:e.title,dot:e.color}))); }},
+  {key:'assignee', label:'Assignee', search:true,
+   ico:'<svg class="chip-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+   opts(){ return [{v:'all',t:'All'}].concat(store.users().map(u=>({v:u.id,t:u.name,dot:u.color}))); }},
+  {key:'status', label:'Status',
+   ico:'<svg class="chip-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg>',
+   opts(){ return [{v:'all',t:'All'}].concat(STATUSES.map(s=>({v:s.id,t:s.name,dot:s.color}))); }},
+  {key:'priority', label:'Priority',
+   ico:'<svg class="chip-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 21V4M4 4h13l-2 5 2 5H4"/></svg>',
+   opts(){ return [{v:'all',t:'All'}].concat(Object.keys(PRIORITIES).map(p=>({v:p,t:p,dot:PRIORITIES[p]}))); }},
+  {key:'type', label:'Type',
+   ico:'<svg class="chip-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+   opts(){ return [{v:'all',t:'All'},{v:'Task',t:'Task'},{v:'Bug',t:'Bug'}]; }},
+  {key:'time', label:'Time', allLabel:'Any',
+   ico:'<svg class="chip-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+   opts(){ return [{v:'all',t:'Any'},{v:'yes',t:'Logged'},{v:'no',t:'Not logged'}]; }},
+];
+function filterValLabel(def){ const cur=ui.filters[def.key]; const o=def.opts().find(x=>x.v===cur); return o?o.t:(def.allLabel||'All'); }
+function renderFilterChips(){
+  const wrap=document.getElementById('filterChips'); if(!wrap) return;
+  wrap.innerHTML=FILTER_DEFS.map(def=>{ const active=(ui.filters[def.key]||'all')!=='all';
+    return `<button class="chip ${active?'active':''}" data-key="${def.key}">${def.ico}<span class="chip-lbl">${def.label}</span><span class="chip-val">${esc(filterValLabel(def))}</span>${CHEV_SVG}</button>`;
+  }).join('');
+  wrap.querySelectorAll('.chip').forEach(c=>c.onclick=e=>{ e.stopPropagation(); openFilterMenu(c.dataset.key, c); });
+}
+let fmOpen=null;
+function closeFilterMenu(){ document.getElementById('filterMenu').classList.remove('on'); fmOpen=null; }
+function openFilterMenu(key, chip){
+  const def=FILTER_DEFS.find(d=>d.key===key); const menu=document.getElementById('filterMenu');
+  if(fmOpen===key){ closeFilterMenu(); return; }
+  fmOpen=key;
+  const cur=ui.filters[key]||'all';
+  const draw=(q)=>{ const items=def.opts().filter(o=>!q||o.t.toLowerCase().includes(q.toLowerCase()));
+    const list=items.length?items.map(o=>`<div class="fmenu-item ${o.v===cur?'sel':''}" data-v="${o.v}">${o.v===cur?'<svg class="fchk" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg>':(o.dot?`<span class="fdot" style="background:${o.dot}"></span>`:'<span class="fchk"></span>')}<span style="overflow:hidden;text-overflow:ellipsis">${esc(o.t)}</span></div>`).join(''):'<div class="fmenu-empty">No matches</div>';
+    menu.querySelector('.fmenu-list').innerHTML=list;
+    menu.querySelectorAll('.fmenu-item').forEach(it=>it.onclick=()=>{ ui.filters[key]=it.dataset.v; closeFilterMenu(); renderFilterChips(); refreshViews(); }); };
+  menu.innerHTML=(def.search?`<div class="fmenu-search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="text" placeholder="Search ${def.label.toLowerCase()}"/></div>`:'')+`<div class="fmenu-list"></div>`;
+  draw('');
+  const r=chip.getBoundingClientRect();
+  menu.style.top=(r.bottom+6)+'px'; menu.style.left=Math.min(r.left, window.innerWidth-330)+'px';
+  menu.classList.add('on');
+  const si=menu.querySelector('.fmenu-search input'); if(si){ si.oninput=()=>draw(si.value); setTimeout(()=>si.focus(),0); }
+}
+document.addEventListener('click',e=>{ if(fmOpen && !e.target.closest('#filterMenu')) closeFilterMenu(); });
+window.addEventListener('scroll',()=>{ if(fmOpen) closeFilterMenu(); }, true);
 function fillFilters(){
-  const set=(id,opts,cur)=>{ const s=document.getElementById(id);
-    s.innerHTML=`<option value="all">All</option>`+opts.map(o=>`<option value="${o.v}" ${cur===o.v?'selected':''}>${o.t}</option>`).join(''); };
-  set('fAssignee', store.users().map(u=>({v:u.id,t:u.name})), ui.filters.assignee);
-  set('fStatus', STATUSES.map(s=>({v:s.id,t:s.name})), ui.filters.status);
-  set('fPriority', Object.keys(PRIORITIES).map(p=>({v:p,t:p})), ui.filters.priority);
-  set('fType', ['Task','Bug'].map(t=>({v:t,t:t})), ui.filters.type);
-  const eOpts=store.epics().filter(e=>ui.project==='all'||e.project===ui.project);
-  const es=document.getElementById('fEpic');
-  es.innerHTML=`<option value="all">All</option><option value="none" ${ui.filters.epic==='none'?'selected':''}>No epic</option>`+
-    eOpts.map(e=>`<option value="${e.id}" ${ui.filters.epic===e.id?'selected':''}>${esc(e.title)}</option>`).join('');
+  renderFilterChips();
   const seg=document.getElementById('periodSeg'); if(seg){ seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on', x.dataset.p===(ui.filters.period||'all')));
     document.getElementById('fPeriodCustom').style.display = ui.filters.period==='custom'?'flex':'none'; }
 }
@@ -2325,9 +2372,6 @@ const wsSwitch=document.getElementById('wsSwitch'), wsMenu=document.getElementBy
 wsSwitch.onclick=e=>{ e.stopPropagation(); wsMenu.classList.toggle('on'); };
 document.addEventListener('click',()=>wsMenu.classList.remove('on'));
 document.getElementById('search').oninput=e=>{ ui.filters.search=e.target.value; refreshViews(); };
-['fAssignee','fStatus','fPriority','fType','fTime','fEpic'].forEach(id=>{
-  document.getElementById(id).onchange=e=>{ const map={fAssignee:'assignee',fStatus:'status',fPriority:'priority',fType:'type',fTime:'time',fEpic:'epic'};
-    ui.filters[map[id]]=e.target.value; refreshViews(); }; });
 document.querySelectorAll('#periodSeg button').forEach(btn=>btn.onclick=()=>{ const p=btn.dataset.p; ui.filters.period=p;
   document.querySelectorAll('#periodSeg button').forEach(x=>x.classList.toggle('on', x===btn));
   document.getElementById('fPeriodCustom').style.display = p==='custom'?'flex':'none'; refreshViews(); });
@@ -2337,7 +2381,7 @@ document.getElementById('clearFilters').onclick=()=>{ ui.filters={search:'',assi
   document.getElementById('search').value=''; document.getElementById('fPeriodCustom').style.display='none';
   const ff=document.getElementById('fFrom'), ft=document.getElementById('fTo'); if(ff)ff.value=''; if(ft)ft.value='';
   document.querySelectorAll('#periodSeg button').forEach(x=>x.classList.toggle('on', x.dataset.p==='all'));
-  fillFilters(); refreshViews(); };
+  renderFilterChips(); refreshViews(); };
 document.getElementById('newTaskBtn').onclick=openModal;
 document.getElementById('bsAdd').onclick=()=>{
   if(bsTab==='boards'){ const id=store.addBoard('New board'); ui.board=id; renderBoardSettings(); renderBoardSwitch();
