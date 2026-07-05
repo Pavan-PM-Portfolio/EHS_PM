@@ -149,6 +149,11 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .filter-clear{border:0;background:none;color:var(--accent);font-size:12px;font-weight:600;padding:6px 4px}
 .filter-count{font-size:12px;color:var(--muted);margin-left:auto}
 .filter-count b{color:var(--ink-2);font-weight:600}
+.period-seg{display:inline-flex;background:var(--surface-3);border-radius:10px;padding:3px;gap:2px}
+.period-seg button{border:0;background:none;padding:6px 13px;border-radius:8px;font-size:12.5px;font-weight:500;
+  color:var(--muted);cursor:pointer;white-space:nowrap;transition:.12s}
+.period-seg button:hover{color:var(--ink-2)}
+.period-seg button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:var(--shadow-sm)}
 
 /* ---------- Board ---------- */
 .scroll{overflow:visible}
@@ -718,8 +723,13 @@ input,select,textarea{font-family:inherit;font-size:13px}
       <div class="fl"><label>Type</label><select id="fType"></select></div>
       <div class="fl"><label>Has time</label><select id="fTime">
         <option value="all">Any</option><option value="yes">Logged</option><option value="no">Not logged</option></select></div>
-      <div class="fl"><label>Period</label><select id="fPeriod">
-        <option value="all">All time</option><option value="today">Today</option><option value="week">This week</option><option value="month">This month</option><option value="custom">Custom</option></select></div>
+      <div class="period-seg" id="periodSeg">
+        <button data-p="all" class="on">All time</button>
+        <button data-p="today">Today</button>
+        <button data-p="week">This week</button>
+        <button data-p="month">This month</button>
+        <button data-p="custom">Custom</button>
+      </div>
       <div class="fl" id="fPeriodCustom" style="display:none"><input type="date" id="fFrom" class="an-date"/><span style="color:var(--muted);font-size:12px">to</span><input type="date" id="fTo" class="an-date"/></div>
       <button class="filter-clear" id="clearFilters">Clear all</button>
       <div class="filter-count" id="filterCount"></div>
@@ -1116,7 +1126,7 @@ function fillFilters(){
   const es=document.getElementById('fEpic');
   es.innerHTML=`<option value="all">All</option><option value="none" ${ui.filters.epic==='none'?'selected':''}>No epic</option>`+
     eOpts.map(e=>`<option value="${e.id}" ${ui.filters.epic===e.id?'selected':''}>${esc(e.title)}</option>`).join('');
-  const fp=document.getElementById('fPeriod'); if(fp){ fp.value=ui.filters.period||'all';
+  const seg=document.getElementById('periodSeg'); if(seg){ seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on', x.dataset.p===(ui.filters.period||'all')));
     document.getElementById('fPeriodCustom').style.display = ui.filters.period==='custom'?'flex':'none'; }
 }
 
@@ -1158,7 +1168,7 @@ function boardColsHTML(cols, tasks){
     const col=tasks.filter(t=>t.status===s.id);
     const mins=col.reduce((a,t)=>a+taskTotals(t.id).total,0);
     return `<div class="col" data-status="${s.id}">
-      <div class="col-h"><span class="col-dot" style="background:${s.color}"></span>
+      <div class="col-h">
         <span class="t">${esc(s.name)}</span><span class="c">${col.length}</span>
         ${mins?`<span class="time">${hm(mins)}</span>`:''}</div>
       <div class="col-body">${col.map(cardHTML).join('')||'<div style="padding:8px 4px;font-size:11.5px;color:var(--faint)">No tickets</div>'}</div>
@@ -2311,13 +2321,15 @@ document.getElementById('search').oninput=e=>{ ui.filters.search=e.target.value;
 ['fAssignee','fStatus','fPriority','fType','fTime','fEpic'].forEach(id=>{
   document.getElementById(id).onchange=e=>{ const map={fAssignee:'assignee',fStatus:'status',fPriority:'priority',fType:'type',fTime:'time',fEpic:'epic'};
     ui.filters[map[id]]=e.target.value; refreshViews(); }; });
-document.getElementById('fPeriod').onchange=e=>{ ui.filters.period=e.target.value;
-  document.getElementById('fPeriodCustom').style.display = e.target.value==='custom'?'flex':'none'; refreshViews(); };
+document.querySelectorAll('#periodSeg button').forEach(btn=>btn.onclick=()=>{ const p=btn.dataset.p; ui.filters.period=p;
+  document.querySelectorAll('#periodSeg button').forEach(x=>x.classList.toggle('on', x===btn));
+  document.getElementById('fPeriodCustom').style.display = p==='custom'?'flex':'none'; refreshViews(); });
 document.getElementById('fFrom').onchange=e=>{ ui.filters.from=e.target.value; refreshViews(); };
 document.getElementById('fTo').onchange=e=>{ ui.filters.to=e.target.value; refreshViews(); };
 document.getElementById('clearFilters').onclick=()=>{ ui.filters={search:'',assignee:'all',status:'all',priority:'all',type:'all',time:'all',epic:'all',period:'all',from:'',to:''};
   document.getElementById('search').value=''; document.getElementById('fPeriodCustom').style.display='none';
   const ff=document.getElementById('fFrom'), ft=document.getElementById('fTo'); if(ff)ff.value=''; if(ft)ft.value='';
+  document.querySelectorAll('#periodSeg button').forEach(x=>x.classList.toggle('on', x.dataset.p==='all'));
   fillFilters(); refreshViews(); };
 document.getElementById('newTaskBtn').onclick=openModal;
 document.getElementById('bsAdd').onclick=()=>{
