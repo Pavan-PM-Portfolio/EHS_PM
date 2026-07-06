@@ -1351,8 +1351,8 @@ input,select,textarea{font-family:inherit;font-size:13px}
    ►► SUPABASE CONFIG — paste your two values here to go live.
    Leave as-is to run in local (single-browser) demo mode.
 ============================================================ */
-const SUPABASE_URL  = "PASTE_PROJECT_URL_HERE";
-const SUPABASE_ANON = "PASTE_ANON_KEY_HERE";
+const SUPABASE_URL  = "https://xskzexadvvcpjsnldtga.supabase.co";
+const SUPABASE_ANON = "sb_publishable_ZHh7fy99zvHj_bm72KX8Cg_VbA7LrDu";
 
 /* ============================================================
    DATA LAYER  —  reads stay in-memory (store.data); writes sync
@@ -3531,8 +3531,9 @@ document.querySelectorAll('.tn-item').forEach(b=>b.onclick=()=>{
 document.getElementById('pkAvatar').onclick=e=>{ e.stopPropagation(); document.getElementById('acctMenu').classList.toggle('on'); };
 document.addEventListener('click',()=>document.getElementById('acctMenu').classList.remove('on'));
 document.getElementById('signOutBtn').onclick=async()=>{
-  if(REMOTE && sb){ try{ await sb.auth.signOut(); }catch(e){} location.reload(); }
-  else { toast('Sign out works once connected to Supabase'); document.getElementById('acctMenu').classList.remove('on'); }
+  const am=document.getElementById('acctMenu'); if(am) am.classList.remove('on');
+  if(sb && sb.auth){ try{ await sb.auth.signOut(); }catch(e){} location.reload(); return; }
+  toast('This is the login-free preview — sign-out applies on the live app.');
 };
 document.getElementById('navBoardsToggle').onclick=e=>{ if(e.target.closest('#navAddBoard')) return; e.currentTarget.classList.toggle('open'); };
 document.getElementById('navAnalyticsToggle').onclick=e=>{ const tog=e.currentTarget;
@@ -3741,4 +3742,3 @@ boot();
 </script>
 </body>
 </html>
-
