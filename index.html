@@ -571,6 +571,10 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .pw-field input:focus{border-color:var(--accent)}
 .pw-err{display:none;color:var(--crit);font-size:12.5px;margin:2px 0 10px}
 .pw-err.on{display:block}
+.um-result{font-size:12.5px;line-height:1.5;padding:0;margin:0 0 14px}
+.um-result:empty{display:none}
+.um-result.ok{color:#0F6E56;background:#E1F5EE;border:1px solid #9FD9C7;padding:10px 12px}
+.um-result.bad{color:#8A1C13;background:#FCE8E6;border:1px solid #F3B4AD;padding:10px 12px}
 .um-add input{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;flex:1;min-width:130px;outline:none}
 .um-add input:focus{border-color:var(--accent)}
 .um-add select{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13px}
@@ -3015,6 +3019,7 @@ const DEFAULT_ROLE_PERMS={
   Viewer: _setOf(['mod_pm','mod_delivery','mod_products','mod_ops','view_board','view_list','view_epics','view_overview','view_analytics','view_reports','view_team','view_operations','see_estimate','see_logged','see_contributors','see_dates','see_reporter','see_desc','see_custom','time_view'])
 };
 let editRole='Developer';
+let umLastMsg=null;
 function permOf(u){ return u.perm || (u.role==='PM'?'Admin' : u.role==='Developer'?'Developer' : u.role==='Viewer'?'Viewer' : 'User'); }
 function resetPassword(email){ if(!email){ toast('No email on file for this member'); return; }
   if(typeof sb!=='undefined' && sb && sb.auth && sb.auth.resetPasswordForEmail){
@@ -3055,6 +3060,7 @@ function renderSettings(){
         <select id="umPerm">${PERMS.map(pm=>`<option ${pm==='Developer'?'selected':''}>${pm}</option>`).join('')}</select>
         <button class="btn primary" id="umAdd" style="padding:8px 14px">Add member</button>
       </div>
+      <div id="umResult" class="um-result"></div>
       <div class="um-list">${umUsers.map(u=>{ const perm=permOf(u); return `<div class="um-row" data-user="${u.id}">
         <div class="um-ava" style="background:${avatarColor(u)}20;border:1.5px solid ${avatarColor(u)};color:${avatarColor(u)}">${initials(u.name)}</div>
         <div class="um-info"><div class="um-nm">${esc(u.name)}</div><div class="um-em">${esc(u.email||'—')}</div></div>
@@ -3107,18 +3113,26 @@ function renderSettings(){
   el.querySelectorAll('.um-req').forEach(row=>{ const rid=row.dataset.req;
     row.querySelector('.um-accept').onclick=()=>{ const r=store.accessRequests().find(x=>x.id===rid); if(r) r.perm=row.querySelector('.um-req-perm').value; store.acceptRequest(rid); toast('Access granted'); renderSettings(); renderAll(); };
     row.querySelector('.um-reject').onclick=()=>{ store.rejectRequest(rid); toast('Request rejected'); renderSettings(); }; });
-  document.getElementById('umAdd').onclick=async()=>{ const nm=document.getElementById('umName').value.trim(); const em=document.getElementById('umEmail').value.trim(); const pw=document.getElementById('umPass').value; const pm=document.getElementById('umPerm').value;
+  document.getElementById('umAdd').onclick=async()=>{ const nm=document.getElementById('umName').value.trim(); const em=document.getElementById('umEmail').value.trim().toLowerCase(); const pw=document.getElementById('umPass').value; const pm=document.getElementById('umPerm').value;
+    const setMsg=(html,ok)=>{ umLastMsg={html,ok}; const o=document.getElementById('umResult'); if(o){ o.className='um-result '+(ok?'ok':'bad'); o.innerHTML=html; } };
     if(!nm){ toast('Enter a name'); return; }
     if(!em){ toast('Enter an email — it is their login'); return; }
     if(sb && sb.auth){ if(!pw || pw.length<6){ toast('Set a temporary password (min 6 characters)'); return; }
       const btn=document.getElementById('umAdd'); btn.disabled=true; btn.textContent='Adding…';
       const {data, error}=await adminCreateAuthUser(em, pw);
-      if(error){ btn.disabled=false; btn.textContent='Add member'; toast(error.message||'Could not create login for this email'); return; }
-      const newId=data&&data.user&&data.user.id;
-      if(newId && typeof WS!=='undefined' && WS){ try{ const {error:me}=await sb.from('members').insert({workspace_id:WS, user_id:newId, role:(pm==='Admin'?'admin':'member')}); if(me) toast('Login created, but workspace access failed: '+me.message); }catch(e){} }
+      console.log('[add member] signUp result:', {data, error});
       btn.disabled=false; btn.textContent='Add member';
-      store.addMember(nm, em, pm); store.flagPwPending(em); toast(`${nm} added — share the temporary password`); renderSettings(); renderAll();
-    } else { store.addMember(nm, em, pm); if(em) store.flagPwPending(em); toast(`${nm} added (passwords apply on the live app)`); renderSettings(); renderAll(); }
+      if(error){ setMsg('Could not create login: <b>'+esc(error.message||'unknown error')+'</b>', false); return; }
+      const newId=data&&data.user&&data.user.id; const hasSession=!!(data&&data.session);
+      if(!newId){ setMsg('Supabase returned no user. In Auth → Sign In / Providers, enable <b>Allow new users to sign up</b>.', false); return; }
+      let memErr='';
+      if(typeof WS!=='undefined' && WS){ try{ const {error:me}=await sb.from('members').insert({workspace_id:WS, user_id:newId, role:(pm==='Admin'?'admin':'member')}); if(me) memErr=me.message; }catch(e){ memErr=(e&&e.message)||'insert failed'; } }
+      store.addMember(nm, em, pm);
+      if(!hasSession){ setMsg(esc(nm)+' created, but Supabase returned no session — <b>“Confirm email” is still ON</b>. Turn it OFF at Auth → Providers → Email, delete this user in Auth → Users, then add again.', false); }
+      else if(memErr){ setMsg('Login created for <b>'+esc(em)+'</b>, but adding to the workspace failed: <b>'+esc(memErr)+'</b> (members-table RLS). They can sign in but won’t see data until this is fixed.', false); }
+      else { setMsg('✓ <b>'+esc(nm)+'</b> is ready. They sign in with <b>'+esc(em)+'</b> + the temporary password, then set their own.', true); }
+      renderSettings(); renderAll();
+    } else { store.addMember(nm, em, pm); if(em) store.flagPwPending(em); setMsg('Added in preview mode — real logins are created only on the live app.', true); renderSettings(); renderAll(); }
   };
   el.querySelectorAll('.um-row').forEach(row=>{ const uid=row.dataset.user;
     row.querySelector('.um-row-perm').onchange=e=>{ store.updateUser(uid,{perm:e.target.value}); toast('Permission updated'); };
@@ -3127,6 +3141,7 @@ function renderSettings(){
   el.querySelectorAll('.role-tab').forEach(tb=>tb.onclick=()=>{ editRole=tb.dataset.role; renderSettings(); });
   el.querySelectorAll('.role-bulk').forEach(a=>a.onclick=()=>{ if(editRole==='Admin') return; rolePerms[editRole]=a.dataset.all==='1'?_setOf(ALL_CAPS):{}; store.updateSettings({rolePerms}); renderSettings(); });
   el.querySelectorAll('.perm-cb').forEach(cb=>cb.onchange=()=>{ if(editRole==='Admin') return; if(!rolePerms[editRole]) rolePerms[editRole]={}; rolePerms[editRole][cb.dataset.cap]=cb.checked; store.updateSettings({rolePerms}); });
+  if(umLastMsg){ const o=document.getElementById('umResult'); if(o){ o.className='um-result '+(umLastMsg.ok?'ok':'bad'); o.innerHTML=umLastMsg.html; } }
 }
 
 /* ---------- Operations (workspace admin) ---------- */
@@ -3534,7 +3549,7 @@ function renderSoon(name){
 }
 
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-let toastT; function toast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('on'),2200); }
+let toastT; function toast(msg, ms){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('on'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('on'), ms||2200); }
 
 // events
 document.querySelectorAll('.nav-item[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
@@ -3677,12 +3692,14 @@ async function loadWorkspace(){
   const em=(ME&&ME.email)||''; const ae=document.getElementById('acctEmail'); if(ae) ae.textContent=em||'Signed in';
   if(em){ const first=em.split('@')[0].replace(/[._-]+/g,' ').trim().split(' ')[0].replace(/^\w/,c=>c.toUpperCase()); const an=document.getElementById('acctName'); if(an) an.textContent=first||'Account'; }
   renderAll(); subscribeRealtime();
-  if(em && store.isPwPending(em)) forcePasswordModal(em);
+  const mc = (ME && ME.user_metadata) ? ME.user_metadata.must_change_pw : undefined;
+  const mustChange = (mc===true) ? true : (mc===false ? false : store.isPwPending(em));
+  if(em && mustChange) forcePasswordModal(em);
 }
 async function adminCreateAuthUser(email, password){
   try{
     const tmp=window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {auth:{storageKey:'sb-tmp-create-'+Date.now(), persistSession:false, autoRefreshToken:false}});
-    const {data, error}=await tmp.auth.signUp({email, password});
+    const {data, error}=await tmp.auth.signUp({email, password, options:{ data:{ must_change_pw:true } }});
     try{ await tmp.auth.signOut(); }catch(e){}
     return {data, error};
   }catch(e){ return {error:{message:(e&&e.message)||'Could not create login'}}; }
@@ -3710,8 +3727,9 @@ function forcePasswordModal(em){
     const btn=document.getElementById('pwSave'); btn.disabled=true; btn.textContent='Saving…';
     const {error:ce}=await sb.auth.signInWithPassword({email:em, password:cur});
     if(ce){ btn.disabled=false; btn.textContent='Save new password'; return err('Current password is incorrect'); }
-    const {error:ue}=await sb.auth.updateUser({password:nw});
+    const {error:ue}=await sb.auth.updateUser({password:nw, data:{ must_change_pw:false }});
     if(ue){ btn.disabled=false; btn.textContent='Save new password'; return err(ue.message||'Could not update password'); }
+    if(ME&&ME.user_metadata) ME.user_metadata.must_change_pw=false;
     try{ store.clearPwPending(em); }catch(e){}
     ov.remove(); toast('Password updated — you’re all set');
   };
