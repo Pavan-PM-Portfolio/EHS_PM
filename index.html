@@ -1504,8 +1504,8 @@ const store = {
   assignmentsForUser(id){ return this.data.tasks.filter(t=>t.assignee===id).length; },
   addUser(name, role){ const id='u'+Date.now().toString(36);
     this.data.users.push({id, name:name||'New teammate', role:role||'Developer', color:SWATCHES[(this.data.users.length*2)%SWATCHES.length]}); this._persist(); return id; },
-  addMember(name, email, perm){ const id='u'+Date.now().toString(36)+Math.floor(Math.random()*99);
-    this.data.users.push({id, name:name||'New member', email:email||'', role:perm||'Developer', perm:perm||'Developer', color:SWATCHES[(this.data.users.length*2)%SWATCHES.length]}); this._persist(); return id; },
+  addMember(name, email, perm, authId){ const id='u'+Date.now().toString(36)+Math.floor(Math.random()*99);
+    this.data.users.push({id, name:name||'New member', email:email||'', role:perm||'Developer', perm:perm||'Developer', authId:authId||null, color:SWATCHES[(this.data.users.length*2)%SWATCHES.length]}); this._persist(); return id; },
   updateUser(id, patch){ Object.assign(this.user(id), patch); this._persist(); },
   pwPending(){ return this.data.settings.pwPending||(this.data.settings.pwPending={}); },
   flagPwPending(email){ if(!email) return; this.pwPending()[email.toLowerCase()]=true; this._persist(); },
@@ -3127,7 +3127,7 @@ function renderSettings(){
       if(!newId){ setMsg('Supabase returned no user. In Auth → Sign In / Providers, enable <b>Allow new users to sign up</b>.', false); return; }
       let memErr='';
       if(typeof WS!=='undefined' && WS){ try{ const {error:me}=await sb.from('members').insert({workspace_id:WS, user_id:newId, role:(pm==='Admin'?'admin':'member')}); if(me) memErr=me.message; }catch(e){ memErr=(e&&e.message)||'insert failed'; } }
-      store.addMember(nm, em, pm);
+      store.addMember(nm, em, pm, newId);
       if(!hasSession){ setMsg(esc(nm)+' created, but Supabase returned no session — <b>“Confirm email” is still ON</b>. Turn it OFF at Auth → Providers → Email, delete this user in Auth → Users, then add again.', false); }
       else if(memErr){ setMsg('Login created for <b>'+esc(em)+'</b>, but adding to the workspace failed: <b>'+esc(memErr)+'</b> (members-table RLS). They can sign in but won’t see data until this is fixed.', false); }
       else { setMsg('✓ <b>'+esc(nm)+'</b> is ready. They sign in with <b>'+esc(em)+'</b> + the temporary password, then set their own.', true); }
@@ -3137,7 +3137,12 @@ function renderSettings(){
   el.querySelectorAll('.um-row').forEach(row=>{ const uid=row.dataset.user;
     row.querySelector('.um-row-perm').onchange=e=>{ store.updateUser(uid,{perm:e.target.value}); toast('Permission updated'); };
     row.querySelector('.um-reset').onclick=e=>{ const em=e.currentTarget.dataset.email; if(!em){ toast('No email on file for this member'); return; } store.flagPwPending(em); toast('They will set a new password on next sign-in'); };
-    row.querySelector('.um-del').onclick=()=>{ if(confirm('Remove this member? Their assignments will be unassigned.')){ store.removeUser(uid); toast('Member removed'); renderSettings(); renderAll(); } }; });
+    row.querySelector('.um-del').onclick=async()=>{ if(!confirm('Remove this member? Their assignments will be unassigned, and their access to this workspace will be revoked.')) return;
+      const person=store.user(uid); const authId=person&&person.authId;
+      if(sb && authId && typeof WS!=='undefined' && WS){ try{ await sb.from('members').delete().eq('workspace_id',WS).eq('user_id',authId); }catch(e){} }
+      store.removeUser(uid); renderSettings(); renderAll();
+      toast(sb ? 'Member removed. To fully delete their login, delete them in Supabase → Authentication → Users.' : 'Member removed', 6000);
+    }; });
   el.querySelectorAll('.role-tab').forEach(tb=>tb.onclick=()=>{ editRole=tb.dataset.role; renderSettings(); });
   el.querySelectorAll('.role-bulk').forEach(a=>a.onclick=()=>{ if(editRole==='Admin') return; rolePerms[editRole]=a.dataset.all==='1'?_setOf(ALL_CAPS):{}; store.updateSettings({rolePerms}); renderSettings(); });
   el.querySelectorAll('.perm-cb').forEach(cb=>cb.onchange=()=>{ if(editRole==='Admin') return; if(!rolePerms[editRole]) rolePerms[editRole]={}; rolePerms[editRole][cb.dataset.cap]=cb.checked; store.updateSettings({rolePerms}); });
