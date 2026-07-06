@@ -565,6 +565,12 @@ input,select,textarea{font-family:inherit;font-size:13px}
 .um-em{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .um-perm{border:1px solid var(--line);background:var(--surface-2);border-radius:7px;padding:6px 8px;font-size:12.5px;color:var(--ink-2);font-family:inherit;flex:none}
 .um-add{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.pw-field{margin-bottom:12px}
+.pw-field label{display:block;font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.pw-field input{width:100%;border:1px solid var(--line);padding:9px 11px;font-family:inherit;font-size:13px;outline:none;box-sizing:border-box}
+.pw-field input:focus{border-color:var(--accent)}
+.pw-err{display:none;color:var(--crit);font-size:12.5px;margin:2px 0 10px}
+.pw-err.on{display:block}
 .um-add input{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;flex:1;min-width:130px;outline:none}
 .um-add input:focus{border-color:var(--accent)}
 .um-add select{border:1px solid var(--line);background:var(--surface-2);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13px}
@@ -1497,6 +1503,10 @@ const store = {
   addMember(name, email, perm){ const id='u'+Date.now().toString(36)+Math.floor(Math.random()*99);
     this.data.users.push({id, name:name||'New member', email:email||'', role:perm||'Developer', perm:perm||'Developer', color:SWATCHES[(this.data.users.length*2)%SWATCHES.length]}); this._persist(); return id; },
   updateUser(id, patch){ Object.assign(this.user(id), patch); this._persist(); },
+  pwPending(){ return this.data.settings.pwPending||(this.data.settings.pwPending={}); },
+  flagPwPending(email){ if(!email) return; this.pwPending()[email.toLowerCase()]=true; this._persist(); },
+  clearPwPending(email){ if(!email) return; const m=this.pwPending(); delete m[email.toLowerCase()]; this._persist(); },
+  isPwPending(email){ return !!(email && this.pwPending()[email.toLowerCase()]); },
   removeUser(id){ this.data.users=this.data.users.filter(u=>u.id!==id);
     this.data.tasks.forEach(t=>{ if(t.assignee===id) t.assignee=null; if(t.reporter===id) t.reporter=null; if(t.qa===id) t.qa=null; if(t.reviewer===id) t.reviewer=null; if(t.deployer===id) t.deployer=null; });
     this.data.teams.forEach(tm=>{ tm.members=tm.members.filter(x=>x!==id); if(tm.lead===id) tm.lead=null; });
@@ -3041,6 +3051,7 @@ function renderSettings(){
       <div class="um-add">
         <input id="umName" placeholder="Full name"/>
         <input id="umEmail" type="email" placeholder="Email address"/>
+        <input id="umPass" type="text" placeholder="Set a temporary password"/>
         <select id="umPerm">${PERMS.map(pm=>`<option ${pm==='Developer'?'selected':''}>${pm}</option>`).join('')}</select>
         <button class="btn primary" id="umAdd" style="padding:8px 14px">Add member</button>
       </div>
@@ -3048,10 +3059,10 @@ function renderSettings(){
         <div class="um-ava" style="background:${avatarColor(u)}20;border:1.5px solid ${avatarColor(u)};color:${avatarColor(u)}">${initials(u.name)}</div>
         <div class="um-info"><div class="um-nm">${esc(u.name)}</div><div class="um-em">${esc(u.email||'—')}</div></div>
         <select class="um-perm um-row-perm">${PERMS.map(pm=>`<option ${perm===pm?'selected':''}>${pm}</option>`).join('')}</select>
-        <button class="btn um-reset" data-email="${esc(u.email||'')}" style="padding:6px 10px;font-size:12px">Reset password</button>
+        <button class="btn um-reset" data-email="${esc(u.email||'')}" data-user="${u.id}" style="padding:6px 10px;font-size:12px">Reset password</button>
         <button class="um-del" title="Remove member"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
       </div>`; }).join('')}</div>
-      <div class="set-note">Password resets send a secure link to the member's email. Assign each member one of the four roles; configure what each role can do below.</div>
+      <div class="set-note">Set a temporary password when adding a member — they'll be asked to choose their own password on first sign-in. "Reset password" flags a member to set a new password the next time they log in (they'll need their current one). No reset emails are sent.</div>
     </div>
     <div class="op-sec">
       <div class="op-sec-h"><h3>Roles &amp; permissions</h3><span class="range">Customize what each role can access</span></div>
@@ -3096,11 +3107,22 @@ function renderSettings(){
   el.querySelectorAll('.um-req').forEach(row=>{ const rid=row.dataset.req;
     row.querySelector('.um-accept').onclick=()=>{ const r=store.accessRequests().find(x=>x.id===rid); if(r) r.perm=row.querySelector('.um-req-perm').value; store.acceptRequest(rid); toast('Access granted'); renderSettings(); renderAll(); };
     row.querySelector('.um-reject').onclick=()=>{ store.rejectRequest(rid); toast('Request rejected'); renderSettings(); }; });
-  document.getElementById('umAdd').onclick=()=>{ const nm=document.getElementById('umName').value.trim(); const em=document.getElementById('umEmail').value.trim(); const pm=document.getElementById('umPerm').value;
-    if(!nm){ toast('Enter a name'); return; } store.addMember(nm, em, pm); toast(`${nm} added`); renderSettings(); renderAll(); };
+  document.getElementById('umAdd').onclick=async()=>{ const nm=document.getElementById('umName').value.trim(); const em=document.getElementById('umEmail').value.trim(); const pw=document.getElementById('umPass').value; const pm=document.getElementById('umPerm').value;
+    if(!nm){ toast('Enter a name'); return; }
+    if(!em){ toast('Enter an email — it is their login'); return; }
+    if(sb && sb.auth){ if(!pw || pw.length<6){ toast('Set a temporary password (min 6 characters)'); return; }
+      const btn=document.getElementById('umAdd'); btn.disabled=true; btn.textContent='Adding…';
+      const {data, error}=await adminCreateAuthUser(em, pw);
+      if(error){ btn.disabled=false; btn.textContent='Add member'; toast(error.message||'Could not create login for this email'); return; }
+      const newId=data&&data.user&&data.user.id;
+      if(newId && typeof WS!=='undefined' && WS){ try{ const {error:me}=await sb.from('members').insert({workspace_id:WS, user_id:newId, role:(pm==='Admin'?'admin':'member')}); if(me) toast('Login created, but workspace access failed: '+me.message); }catch(e){} }
+      btn.disabled=false; btn.textContent='Add member';
+      store.addMember(nm, em, pm); store.flagPwPending(em); toast(`${nm} added — share the temporary password`); renderSettings(); renderAll();
+    } else { store.addMember(nm, em, pm); if(em) store.flagPwPending(em); toast(`${nm} added (passwords apply on the live app)`); renderSettings(); renderAll(); }
+  };
   el.querySelectorAll('.um-row').forEach(row=>{ const uid=row.dataset.user;
     row.querySelector('.um-row-perm').onchange=e=>{ store.updateUser(uid,{perm:e.target.value}); toast('Permission updated'); };
-    row.querySelector('.um-reset').onclick=e=>resetPassword(e.currentTarget.dataset.email);
+    row.querySelector('.um-reset').onclick=e=>{ const em=e.currentTarget.dataset.email; if(!em){ toast('No email on file for this member'); return; } store.flagPwPending(em); toast('They will set a new password on next sign-in'); };
     row.querySelector('.um-del').onclick=()=>{ if(confirm('Remove this member? Their assignments will be unassigned.')){ store.removeUser(uid); toast('Member removed'); renderSettings(); renderAll(); } }; });
   el.querySelectorAll('.role-tab').forEach(tb=>tb.onclick=()=>{ editRole=tb.dataset.role; renderSettings(); });
   el.querySelectorAll('.role-bulk').forEach(a=>a.onclick=()=>{ if(editRole==='Admin') return; rolePerms[editRole]=a.dataset.all==='1'?_setOf(ALL_CAPS):{}; store.updateSettings({rolePerms}); renderSettings(); });
@@ -3655,6 +3677,44 @@ async function loadWorkspace(){
   const em=(ME&&ME.email)||''; const ae=document.getElementById('acctEmail'); if(ae) ae.textContent=em||'Signed in';
   if(em){ const first=em.split('@')[0].replace(/[._-]+/g,' ').trim().split(' ')[0].replace(/^\w/,c=>c.toUpperCase()); const an=document.getElementById('acctName'); if(an) an.textContent=first||'Account'; }
   renderAll(); subscribeRealtime();
+  if(em && store.isPwPending(em)) forcePasswordModal(em);
+}
+async function adminCreateAuthUser(email, password){
+  try{
+    const tmp=window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {auth:{storageKey:'sb-tmp-create-'+Date.now(), persistSession:false, autoRefreshToken:false}});
+    const {data, error}=await tmp.auth.signUp({email, password});
+    try{ await tmp.auth.signOut(); }catch(e){}
+    return {data, error};
+  }catch(e){ return {error:{message:(e&&e.message)||'Could not create login'}}; }
+}
+function forcePasswordModal(em){
+  if(document.getElementById('pwSetOverlay')) return;
+  const ov=document.createElement('div'); ov.className='colm-overlay'; ov.id='pwSetOverlay'; ov.style.zIndex='400';
+  ov.innerHTML=`<div class="colm" style="width:420px;max-width:94vw">
+    <div class="colm-h"><span>Set your password</span></div>
+    <div style="padding:18px">
+      <p style="font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.55">Welcome! For your first sign-in, enter the temporary password your admin gave you, then choose your own new password.</p>
+      <div class="pw-field"><label>Current (temporary) password</label><input type="password" id="pwCur" autocomplete="current-password"/></div>
+      <div class="pw-field"><label>New password</label><input type="password" id="pwNew" autocomplete="new-password"/></div>
+      <div class="pw-field"><label>Confirm new password</label><input type="password" id="pwNew2" autocomplete="new-password"/></div>
+      <div class="pw-err" id="pwErr"></div>
+      <button class="btn primary" id="pwSave" style="width:100%;margin-top:8px">Save new password</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  const err=m=>{ const e=document.getElementById('pwErr'); e.textContent=m; e.classList.add('on'); };
+  document.getElementById('pwSave').onclick=async()=>{
+    const cur=document.getElementById('pwCur').value, nw=document.getElementById('pwNew').value, nw2=document.getElementById('pwNew2').value;
+    if(!cur) return err('Enter your current password');
+    if(!nw || nw.length<6) return err('New password must be at least 6 characters');
+    if(nw!==nw2) return err('New passwords do not match');
+    const btn=document.getElementById('pwSave'); btn.disabled=true; btn.textContent='Saving…';
+    const {error:ce}=await sb.auth.signInWithPassword({email:em, password:cur});
+    if(ce){ btn.disabled=false; btn.textContent='Save new password'; return err('Current password is incorrect'); }
+    const {error:ue}=await sb.auth.updateUser({password:nw});
+    if(ue){ btn.disabled=false; btn.textContent='Save new password'; return err(ue.message||'Could not update password'); }
+    try{ store.clearPwPending(em); }catch(e){}
+    ov.remove(); toast('Password updated — you’re all set');
+  };
 }
 async function fetchAll(){
   store.data = store.data || {};
