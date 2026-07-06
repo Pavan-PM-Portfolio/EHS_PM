@@ -3126,7 +3126,7 @@ function renderSettings(){
       const newId=data&&data.user&&data.user.id; const hasSession=!!(data&&data.session);
       if(!newId){ setMsg('Supabase returned no user. In Auth → Sign In / Providers, enable <b>Allow new users to sign up</b>.', false); return; }
       let memErr='';
-      if(typeof WS!=='undefined' && WS){ try{ const {error:me}=await sb.from('members').insert({workspace_id:WS, user_id:newId, role:(pm==='Admin'?'admin':'member')}); if(me) memErr=me.message; }catch(e){ memErr=(e&&e.message)||'insert failed'; } }
+      if(typeof WS!=='undefined' && WS){ try{ const {error:me}=await sb.from('members').insert({workspace_id:WS, user_id:newId, email:em, role:(pm==='Admin'?'admin':'member')}); if(me) memErr=me.message; }catch(e){ memErr=(e&&e.message)||'insert failed'; } }
       store.addMember(nm, em, pm, newId);
       if(!hasSession){ setMsg(esc(nm)+' created, but Supabase returned no session — <b>“Confirm email” is still ON</b>. Turn it OFF at Auth → Providers → Email, delete this user in Auth → Users, then add again.', false); }
       else if(memErr){ setMsg('Login created for <b>'+esc(em)+'</b>, but adding to the workspace failed: <b>'+esc(memErr)+'</b> (members-table RLS). They can sign in but won’t see data until this is fixed.', false); }
